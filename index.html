@@ -523,6 +523,71 @@ select option{background:var(--black)}textarea{resize:vertical;min-height:72px}
   </div>
 </div>
 
+<!-- BARCODE MODAL -->
+<div class="modal-overlay" id="barcodeModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-hdr"><h2>Repair Job Barcode</h2><button class="modal-close" onclick="closeModal('barcodeModal')">✕</button></div>
+    <div class="modal-body" style="text-align:center">
+
+      <!-- Barcode Card — printable -->
+      <div id="barcodeCard" style="background:#fff;color:#000;padding:24px 28px;display:inline-block;width:100%;text-align:left;border:1px solid #eee">
+        <!-- Header -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #000">
+          <div>
+            <div style="font-size:22px;font-weight:900;letter-spacing:3px;font-family:sans-serif">Nuwan<span style="color:#a8cc20">Fix</span></div>
+            <div style="font-size:10px;color:#666;letter-spacing:1px">Phone Repair & Shop</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:11px;color:#999;letter-spacing:1px;text-transform:uppercase">Repair Job</div>
+            <div style="font-size:26px;font-weight:900;color:#000;letter-spacing:2px" id="bcRepNum">R#0000</div>
+          </div>
+        </div>
+
+        <!-- Details grid -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;font-family:sans-serif">
+          <div>
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:2px">Customer</div>
+            <div style="font-size:14px;font-weight:700" id="bcCustomer">—</div>
+          </div>
+          <div>
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:2px">Phone</div>
+            <div style="font-size:14px;font-weight:700" id="bcPhone">—</div>
+          </div>
+          <div>
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:2px">Device</div>
+            <div style="font-size:13px;font-weight:600" id="bcDevice">—</div>
+          </div>
+          <div>
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:2px">Date Received</div>
+            <div style="font-size:13px;font-weight:600" id="bcDate">—</div>
+          </div>
+          <div style="grid-column:1/-1">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:2px">Fault / Issue</div>
+            <div style="font-size:13px;font-weight:600;color:#c00" id="bcFault">—</div>
+          </div>
+        </div>
+
+        <!-- Barcode SVG -->
+        <div style="background:#f8f8f8;padding:12px;text-align:center;border:1px solid #eee;margin-bottom:8px">
+          <svg id="bcSVG" style="max-width:100%;height:60px"></svg>
+          <div style="font-size:11px;letter-spacing:3px;font-family:monospace;margin-top:4px;color:#333" id="bcCode"></div>
+        </div>
+
+        <!-- Status -->
+        <div style="display:flex;justify-content:space-between;align-items:center;font-family:sans-serif">
+          <div style="font-size:11px;color:#999">Status: <strong id="bcStatus" style="color:#000">—</strong></div>
+          <div style="font-size:11px;color:#999">Est. Cost: <strong id="bcCost" style="color:#000">—</strong></div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:center;margin-top:20px">
+        <button class="btn btn-outline btn-sm" onclick="printBarcode()">🖨 Print</button>
+        <button class="btn btn-lime btn-sm" onclick="downloadBarcode()">⬇ Download PNG</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- QR MODAL -->
 <div class="modal-overlay" id="qrModal">
   <div class="modal" style="max-width:360px">
@@ -780,7 +845,7 @@ function renderRepairs(f=''){
       <td style="color:var(--grey);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.issue}</td>
       <td>${bdg(r.status)}</td>
       <td style="font-family:'Bebas Neue',sans-serif;font-size:17px;color:var(--lime)">${fm(r.cost)}</td>
-      <td><div style="display:flex;gap:5px">${pb}<button class="btn btn-outline btn-sm" onclick="openRepModal('${r.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="askDelete('repair','${r.id}')">🗑</button></div></td>
+      <td><div style="display:flex;gap:5px">${pb}<button class="btn btn-outline btn-sm" onclick="showBarcode('${r.id}')">▌▌▌</button><button class="btn btn-outline btn-sm" onclick="openRepModal('${r.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="askDelete('repair','${r.id}')">🗑</button></div></td>
     </tr>`;
   }).join(''):'<tr><td colspan="8"><div class="empty"><div class="ei">🔧</div><p>No repair jobs yet</p></div></td></tr>';
 }
@@ -1080,6 +1145,109 @@ function saveGRN(){
   data.grns.push({id:'grn_'+Date.now(),num:data.nextGRNNum++,date,supplier:document.getElementById('g_sup').value,bill:document.getElementById('g_bill').value,method:document.getElementById('g_method').value,notes:document.getElementById('g_notes').value,items,total});
   closeModal('grnModal');renderGRN();schedulSync();
   alert(`✅ GRN saved! Stock updated for ${items.length} item(s).`);
+}
+
+// ===== BARCODE =====
+function showBarcode(id){
+  const r=data.repairs.find(x=>x.id===id);if(!r)return;
+
+  // Fill card details
+  document.getElementById('bcRepNum').textContent=`R#${r.num}`;
+  document.getElementById('bcCustomer').textContent=r.customer;
+  document.getElementById('bcPhone').textContent=r.phone||'—';
+  document.getElementById('bcDevice').textContent=`${r.brand} ${r.model}`;
+  document.getElementById('bcDate').textContent=fd(r.date);
+  document.getElementById('bcFault').textContent=r.issue;
+  document.getElementById('bcStatus').textContent=r.status;
+  document.getElementById('bcCost').textContent=fm(r.cost);
+
+  // Generate barcode string: NF + padded num + phone last 4 + date digits
+  const ph=(r.phone||'0000').replace(/\D/g,'').slice(-4);
+  const dt=(r.date||'').replace(/-/g,'').slice(-6);
+  const code=`NF${String(r.num).padStart(4,'0')}${ph}${dt}`;
+  document.getElementById('bcCode').textContent=code;
+
+  // Draw barcode as SVG bars (Code 128 style visual)
+  drawBarcodeSVG(code);
+
+  document.getElementById('barcodeModal').classList.add('open');
+}
+
+function drawBarcodeSVG(code){
+  const svg=document.getElementById('bcSVG');
+  svg.innerHTML='';
+  // Simple visual barcode — alternating bar widths based on char codes
+  const chars=code.split('');
+  const totalBars=chars.length*7+10;
+  const barW=Math.floor(320/totalBars);
+  let x=4;
+  // Start guard bars
+  [[2,true],[1,false],[2,true]].forEach(([w,filled])=>{
+    const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x',x);rect.setAttribute('y',0);rect.setAttribute('width',w*barW);rect.setAttribute('height',60);
+    rect.setAttribute('fill',filled?'#000':'#fff');svg.appendChild(rect);x+=w*barW;
+  });
+  // Data bars from char codes
+  chars.forEach(ch=>{
+    const code=ch.charCodeAt(0);
+    const pattern=[(code>>4)&1?2:1,(code>>3)&1?1:2,(code>>2)&1?2:1,(code>>1)&1?1:2,code&1?2:1];
+    pattern.forEach((w,i)=>{
+      const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+      rect.setAttribute('x',x);rect.setAttribute('y',0);rect.setAttribute('width',w*barW);rect.setAttribute('height',60);
+      rect.setAttribute('fill',i%2===0?'#000':'#fff');svg.appendChild(rect);x+=w*barW;
+    });
+  });
+  // End guard bars
+  [[2,true],[1,false],[2,true]].forEach(([w,filled])=>{
+    const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x',x);rect.setAttribute('y',0);rect.setAttribute('width',w*barW);rect.setAttribute('height',60);
+    rect.setAttribute('fill',filled?'#000':'#fff');svg.appendChild(rect);x+=w*barW;
+  });
+  svg.setAttribute('viewBox',`0 0 ${x+4} 60`);
+  svg.setAttribute('width','100%');
+}
+
+function printBarcode(){
+  const card=document.getElementById('barcodeCard').outerHTML;
+  document.getElementById('printArea').innerHTML=`<div style="padding:20px;font-family:sans-serif">${card}</div>`;
+  window.print();
+}
+
+function downloadBarcode(){
+  // Use html2canvas via CDN or fallback to SVG download
+  const card=document.getElementById('barcodeCard');
+  const svg=document.getElementById('bcSVG');
+  const code=document.getElementById('bcCode').textContent;
+  const repNum=document.getElementById('bcRepNum').textContent;
+
+  // Build a downloadable SVG with all info
+  const w=400,h=220;
+  const svgContent=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" style="background:#fff;font-family:Arial,sans-serif">
+    <rect width="${w}" height="${h}" fill="#fff"/>
+    <text x="20" y="30" font-size="18" font-weight="900" letter-spacing="2" fill="#000">NuwanFix</text>
+    <text x="20" y="46" font-size="9" fill="#999" letter-spacing="1">PHONE REPAIR &amp; SHOP</text>
+    <text x="${w-20}" y="30" font-size="20" font-weight="900" text-anchor="end" fill="#000">${repNum}</text>
+    <line x1="20" y1="52" x2="${w-20}" y2="52" stroke="#000" stroke-width="1.5"/>
+    <text x="20" y="70" font-size="9" fill="#999" letter-spacing="1">CUSTOMER</text>
+    <text x="20" y="84" font-size="13" font-weight="700" fill="#000">${document.getElementById('bcCustomer').textContent}</text>
+    <text x="210" y="70" font-size="9" fill="#999" letter-spacing="1">PHONE</text>
+    <text x="210" y="84" font-size="13" font-weight="700" fill="#000">${document.getElementById('bcPhone').textContent}</text>
+    <text x="20" y="100" font-size="9" fill="#999" letter-spacing="1">DEVICE</text>
+    <text x="20" y="114" font-size="13" font-weight="600" fill="#000">${document.getElementById('bcDevice').textContent}</text>
+    <text x="210" y="100" font-size="9" fill="#999" letter-spacing="1">DATE</text>
+    <text x="210" y="114" font-size="13" font-weight="600" fill="#000">${document.getElementById('bcDate').textContent}</text>
+    <text x="20" y="130" font-size="9" fill="#999" letter-spacing="1">FAULT</text>
+    <text x="20" y="144" font-size="12" font-weight="600" fill="#c00">${document.getElementById('bcFault').textContent.substring(0,40)}</text>
+    <rect x="20" y="154" width="${w-40}" height="40" fill="#f8f8f8" rx="2"/>
+    ${document.getElementById('bcSVG').innerHTML.replace(/x="(\d+)"/g,(m,v)=>`x="${parseInt(v)+16}"`).replace(/y="0"/g,'y="158"').replace(/height="60"/g,'height="32"')}
+    <text x="${w/2}" y="210" font-size="10" text-anchor="middle" fill="#333" letter-spacing="3" font-family="monospace">${code}</text>
+  </svg>`;
+
+  const blob=new Blob([svgContent],{type:'image/svg+xml'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`NuwanFix-${repNum.replace('#','')}-Barcode.svg`;
+  a.click();
 }
 
 // ===== QR =====
