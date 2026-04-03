@@ -262,13 +262,53 @@ select option{background:var(--black)}textarea{resize:vertical;min-height:72px}
 
   <!-- PAYMENTS -->
   <div class="content page" id="page-payments">
-    <div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
-      <div class="stat-card"><div class="stat-label">Total Paid</div><div class="stat-value lime" id="pPaid">Rs. 0</div></div>
-      <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value" id="pPend" style="color:var(--orange)">Rs. 0</div></div>
-      <div class="stat-card"><div class="stat-label">Transactions</div><div class="stat-value" id="pCount">0</div></div>
+
+    <!-- Filter Buttons -->
+    <div style="display:flex;gap:8px;margin-bottom:20px;align-items:center">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--grey)">View:</span>
+      <button class="btn btn-lime btn-sm" id="pbtn-daily" onclick="setPayMode('daily')">Daily</button>
+      <button class="btn btn-outline btn-sm" id="pbtn-monthly" onclick="setPayMode('monthly')">Monthly</button>
+      <button class="btn btn-outline btn-sm" id="pbtn-yearly" onclick="setPayMode('yearly')">Yearly</button>
     </div>
-    <div class="tbl-wrap"><div class="tbl-head"><h3>Payment History</h3></div>
-    <table><thead><tr><th>Date</th><th>Invoice #</th><th>Customer</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead><tbody id="payList"></tbody></table></div>
+
+    <!-- Period Stats -->
+    <div class="stats-row" style="grid-template-columns:repeat(4,1fr)">
+      <div class="stat-card"><div class="stat-label" id="pyPeriodLbl">Today's Income</div><div class="stat-value lime" id="pyRevenue">Rs. 0</div></div>
+      <div class="stat-card"><div class="stat-label">Transactions</div><div class="stat-value" id="pyCount">0</div></div>
+      <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value" id="pyPend" style="color:var(--orange)">Rs. 0</div></div>
+      <div class="stat-card"><div class="stat-label">Avg Transaction</div><div class="stat-value" id="pyAvg" style="font-size:22px;padding-top:8px">Rs. 0</div></div>
+    </div>
+
+    <!-- Payment Chart -->
+    <div class="tbl-wrap" style="margin-bottom:20px">
+      <div class="tbl-head">
+        <h3 id="payChartTitle">Daily Payments</h3>
+        <div style="display:flex;gap:16px">
+          <div style="display:flex;align-items:center;gap:6px"><div style="width:12px;height:12px;background:rgba(200,241,53,0.85);border-radius:2px"></div><span style="font-size:11px;color:var(--grey);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px">Paid</span></div>
+          <div style="display:flex;align-items:center;gap:6px"><div style="width:12px;height:12px;background:rgba(249,115,22,0.7);border-radius:2px"></div><span style="font-size:11px;color:var(--grey);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px">Pending</span></div>
+        </div>
+      </div>
+      <div style="padding:20px;position:relative;height:260px">
+        <canvas id="payChart"></canvas>
+        <div id="payChartEmpty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;flex-direction:column;gap:8px">
+          <div style="font-size:36px;opacity:0.2">💰</div>
+          <div style="font-size:13px;color:var(--grey)">No payment data yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment Method Breakdown -->
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:18px;margin-bottom:20px">
+      <div class="tbl-wrap">
+        <div class="tbl-head"><h3>By Method</h3></div>
+        <div style="padding:16px 20px" id="payMethodBreakdown"></div>
+      </div>
+      <div class="tbl-wrap">
+        <div class="tbl-head"><h3 id="payListTitle">Today's Transactions</h3></div>
+        <table><thead><tr><th>Date</th><th>Invoice #</th><th>Customer</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead><tbody id="payList"></tbody></table>
+      </div>
+    </div>
+
   </div>
 
   <!-- GRN -->
@@ -821,11 +861,139 @@ function saveCustomer(){
 }
 
 // ===== PAYMENTS =====
-function renderPayments(){
-  const paid=data.invoices.filter(i=>i.status==='Paid').reduce((a,i)=>a+Number(i.total||0),0);
-  const pend=data.invoices.filter(i=>i.status==='Pending').reduce((a,i)=>a+Number(i.total||0),0);
-  document.getElementById('pPaid').textContent=fm(paid);document.getElementById('pPend').textContent=fm(pend);document.getElementById('pCount').textContent=data.invoices.length;
-  document.getElementById('payList').innerHTML=data.invoices.length?[...data.invoices].reverse().map(i=>`<tr><td style="color:var(--grey)">${fd(i.date)}</td><td style="color:var(--lime);font-family:'Bebas Neue',sans-serif;font-size:15px">#${i.num}</td><td>${i.customer}</td><td>${fm(i.total)}</td><td style="color:var(--grey)">${i.method||'Cash'}</td><td>${bdg(i.status)}</td></tr>`).join(''):'<tr><td colspan="6"><div class="empty"><div class="ei">💰</div><p>No payments yet</p></div></td></tr>';
+let payMode='daily', payChartInstance=null;
+
+function setPayMode(mode){
+  payMode=mode;
+  ['daily','monthly','yearly'].forEach(m=>{
+    const b=document.getElementById('pbtn-'+m);
+    if(b)b.className=m===mode?'btn btn-lime btn-sm':'btn btn-outline btn-sm';
+  });
+  renderPayments();
+}
+
+async function renderPayments(){
+  await loadChartJS();
+  const now=new Date();
+  const allInvs=data.invoices;
+  let labels=[],paidVals=[],pendVals=[],filteredInvs=[];
+  let periodLbl='', chartTitle='';
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  if(payMode==='daily'){
+    periodLbl="Today's Income"; chartTitle='Daily Payments (Last 14 Days)';
+    for(let i=13;i>=0;i--){
+      const d=new Date(now);d.setDate(d.getDate()-i);
+      const key=d.toISOString().split('T')[0];
+      const lbl=i===0?'Today':i===1?'Yesterday':`${d.getDate()}/${d.getMonth()+1}`;
+      labels.push(lbl);
+      const di=allInvs.filter(x=>x.date===key);
+      paidVals.push(di.filter(x=>x.status==='Paid').reduce((a,x)=>a+Number(x.total||0),0));
+      pendVals.push(di.filter(x=>x.status==='Pending').reduce((a,x)=>a+Number(x.total||0),0));
+      if(i===0)filteredInvs=di;
+    }
+  } else if(payMode==='monthly'){
+    periodLbl='This Month Income'; chartTitle='Monthly Payments (Last 12 Months)';
+    for(let i=11;i>=0;i--){
+      const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+      const y=d.getFullYear(),m=d.getMonth();
+      labels.push(months[m]+(d.getFullYear()!==now.getFullYear()?` '${String(y).slice(-2)}`:''));
+      const mi=allInvs.filter(x=>{if(!x.date)return false;const id=new Date(x.date);return id.getFullYear()===y&&id.getMonth()===m;});
+      paidVals.push(mi.filter(x=>x.status==='Paid').reduce((a,x)=>a+Number(x.total||0),0));
+      pendVals.push(mi.filter(x=>x.status==='Pending').reduce((a,x)=>a+Number(x.total||0),0));
+      if(i===0)filteredInvs=mi;
+    }
+  } else {
+    periodLbl='This Year Income'; chartTitle='Yearly Payments (Last 5 Years)';
+    for(let i=4;i>=0;i--){
+      const y=now.getFullYear()-i;
+      labels.push(String(y));
+      const yi=allInvs.filter(x=>{if(!x.date)return false;return new Date(x.date).getFullYear()===y;});
+      paidVals.push(yi.filter(x=>x.status==='Paid').reduce((a,x)=>a+Number(x.total||0),0));
+      pendVals.push(yi.filter(x=>x.status==='Pending').reduce((a,x)=>a+Number(x.total||0),0));
+      if(i===0)filteredInvs=yi;
+    }
+  }
+
+  // Stats
+  const periodPaid=filteredInvs.filter(x=>x.status==='Paid').reduce((a,x)=>a+Number(x.total||0),0);
+  const periodPend=filteredInvs.filter(x=>x.status==='Pending').reduce((a,x)=>a+Number(x.total||0),0);
+  const periodCount=filteredInvs.length;
+  const periodAvg=periodCount>0?periodPaid/Math.max(filteredInvs.filter(x=>x.status==='Paid').length,1):0;
+
+  document.getElementById('pyPeriodLbl').textContent=periodLbl;
+  document.getElementById('pyRevenue').textContent=fm(periodPaid);
+  document.getElementById('pyCount').textContent=periodCount;
+  document.getElementById('pyPend').textContent=fm(periodPend);
+  document.getElementById('pyAvg').textContent=fm(periodAvg);
+  document.getElementById('payChartTitle').textContent=chartTitle;
+
+  const listTitle={daily:"Today's Transactions",monthly:"This Month's Transactions",yearly:"This Year's Transactions"};
+  document.getElementById('payListTitle').textContent=listTitle[payMode];
+
+  // Method breakdown
+  const methods={};
+  filteredInvs.filter(x=>x.status==='Paid').forEach(x=>{const m=x.method||'Cash';methods[m]=(methods[m]||0)+Number(x.total||0);});
+  const totalPd=Object.values(methods).reduce((a,v)=>a+v,0);
+  const mColors={Cash:'var(--lime)',Card:'var(--blue)',Online:'var(--green)','Bank Transfer':'var(--orange)'};
+  document.getElementById('payMethodBreakdown').innerHTML=Object.keys(methods).length?
+    Object.entries(methods).sort((a,b)=>b[1]-a[1]).map(([m,v])=>{
+      const pct=totalPd>0?Math.round(v/totalPd*100):0;
+      return `<div style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--white)">${m}</span>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:${mColors[m]||'var(--lime)'}">${fm(v)}</span>
+        </div>
+        <div style="height:4px;background:rgba(255,255,255,0.08);border-radius:2px">
+          <div style="height:4px;background:${mColors[m]||'var(--lime)'};border-radius:2px;width:${pct}%;transition:width 0.4s"></div>
+        </div>
+        <div style="font-size:11px;color:var(--grey);margin-top:3px">${pct}%</div>
+      </div>`;
+    }).join(''):'<div style="text-align:center;padding:20px;color:var(--grey);font-size:13px">No paid transactions</div>';
+
+  // Transaction list
+  document.getElementById('payList').innerHTML=filteredInvs.length?
+    [...filteredInvs].reverse().map(i=>`<tr>
+      <td style="color:var(--grey)">${fd(i.date)}</td>
+      <td style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--lime)">#${i.num}</td>
+      <td>${i.customer}</td>
+      <td style="font-weight:600">${fm(i.total)}</td>
+      <td style="color:var(--grey)">${i.method||'Cash'}</td>
+      <td>${bdg(i.status)}</td>
+    </tr>`).join(''):'<tr><td colspan="6"><div class="empty"><div class="ei">💰</div><p>No transactions</p></div></td></tr>';
+
+  // Chart
+  const hasData=[...paidVals,...pendVals].some(v=>v>0);
+  const emptyEl=document.getElementById('payChartEmpty');
+  emptyEl.style.display=hasData?'none':'flex';
+
+  const ctx=document.getElementById('payChart').getContext('2d');
+  if(payChartInstance)payChartInstance.destroy();
+  payChartInstance=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'Paid',data:paidVals,backgroundColor:'rgba(200,241,53,0.85)',borderColor:'#C8F135',borderWidth:1,borderRadius:4},
+        {label:'Pending',data:pendVals,backgroundColor:'rgba(249,115,22,0.6)',borderColor:'#f97316',borderWidth:1,borderRadius:4}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'#1a1a1a',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,
+          titleColor:'#888',bodyColor:'#fff',
+          callbacks:{label:ctx=>`${ctx.dataset.label}: Rs. ${Number(ctx.raw).toLocaleString('en-LK')}`}
+        }
+      },
+      scales:{
+        x:{stacked:false,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#666',font:{family:'Barlow Condensed',size:11},maxRotation:0}},
+        y:{stacked:false,grid:{color:'rgba(255,255,255,0.04)'},beginAtZero:true,ticks:{color:'#666',font:{family:'Barlow Condensed',size:11},callback:v=>'Rs.'+Number(v).toLocaleString()}}
+      }
+    }
+  });
 }
 
 // ===== GRN / STOCK =====
