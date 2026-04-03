@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NuwanFix — Billing System</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAACtElEQVR4nO2bT2gTQRTGvw0BwxIomJOHwGIPHgR7ChSR0p5bJFTooVSKpSDBIlha1Db0EFLb6qXEW6kBjyWIlBShVawnSQkGT/0DInuoLeRSI7hiQqKX7po0MdvuTvclmfmd9k12H9/7ZvZlM0kkHJPKBf6AIzrb0hIAuAD+igf+1SzxWHw5LmoB1AgD9GbAI51tacmlH1CLcRq9ZgkAZFnmshFqmiZx3wMkXmdfh/sVIAygFkCNMIBaADXCAGoB1AgDqAVQIwygFkAN9wa4zU4YHb2DubnZqvHNzQ8YGBipeY3f70cms1UxpqoqAoHrpoKCIxdxf/aS6Xkn2cn8wr3er2e+zvIK6OnpRlfXDauXNwy2boGZmTAkqbk3k2wZ0NFxDcHgTVZaSDDtAWZMTT3E2tobFAoFFnpqou79xkj3l3PJbftdQFEUDA/fZqGFBEsGqKpaEU9MPIDX62Whx3EsGbCx8Q7p9Ccj9vl8GBsLMRPlJJZ7QCQSRTL52ohDobuIx18im80yEVaOcuUC3h9erXvO+C0Vnz/+PHNuyz0gldrC+vpbI5ZlGZOT41bTkWGrCUajT1AsFo14aGgQ7e2XbYtyElsG7O7uYWUlYcRutxvh8GPbopzE9nPAwsIz9PcH4fF4AAB9fb1YXU3aFlZOQz8HHBwcYmnpRcXY9PQju2kdg8nH4VjsOY6Ovhuxoigs0joCEwNyuR9YXIyxSOU4zDZElpfj2N//xiqdYzAzIJ/PY37+Kat0jsF0SyyReIXt7R2WKc8dpgaUSiVEItXbZ42M+IEEtQBqhAHUAqgRBlALoEYYQC2AGmEAtQBqhAHUAqgRBmia1tzfb9tA/F8Ax7cAj6tAr1msAP2Ap1VQXqvrfy+0KidrrLoFWtmEWrXVLbZV9gvrTeqpZrtZjTjNav4LqRO2brAnqx0AAAAASUVORK5CYII=">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--lime:#C8F135;--lime-dark:#a8cc20;--black:#0a0a0a;--dark:#111;--mid:#1a1a1a;--card:#1e1e1e;--border:rgba(255,255,255,0.08);--white:#f5f5f0;--grey:#888;--red:#ff4444;--green:#22c55e;--orange:#f97316;--blue:#38bdf8}
@@ -146,7 +147,6 @@ select option{background:var(--black)}textarea{resize:vertical;min-height:72px}
       <input type="password" id="loginPass" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <button class="btn btn-lime" style="width:100%;justify-content:center;padding:13px" onclick="doLogin()">Login →</button>
-    <div style="margin-top:16px;text-align:center;font-size:11px;color:var(--grey)">Default: admin / nuwanfix123</div>
   </div>
 </div>
 
@@ -185,12 +185,54 @@ select option{background:var(--black)}textarea{resize:vertical;min-height:72px}
 
   <!-- DASHBOARD -->
   <div class="content page active" id="page-dashboard">
+    <!-- Stats Row -->
     <div class="stats-row">
-      <div class="stat-card"><div class="stat-label">Total Revenue</div><div class="stat-value lime" id="dRevenue">Rs. 0</div><div class="stat-sub">Paid invoices</div></div>
-      <div class="stat-card"><div class="stat-label">Invoices</div><div class="stat-value" id="dInvoices">0</div><div class="stat-sub">Total</div></div>
+      <div class="stat-card"><div class="stat-label">Total Revenue</div><div class="stat-value lime" id="dRevenue">Rs. 0</div><div class="stat-sub">All paid invoices</div></div>
+      <div class="stat-card"><div class="stat-label">Invoices</div><div class="stat-value" id="dInvoices">0</div><div class="stat-sub">Total created</div></div>
       <div class="stat-card"><div class="stat-label">Active Repairs</div><div class="stat-value" id="dRepairs">0</div><div class="stat-sub">In progress</div></div>
       <div class="stat-card"><div class="stat-label">Customers</div><div class="stat-value" id="dCustomers">0</div><div class="stat-sub">Registered</div></div>
     </div>
+
+    <!-- SALES CHART -->
+    <div class="tbl-wrap" style="margin-bottom:18px">
+      <div class="tbl-head">
+        <h3>Sales Overview</h3>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-lime btn-sm" id="btn-daily" onclick="setChartMode('daily')">Daily</button>
+          <button class="btn btn-outline btn-sm" id="btn-monthly" onclick="setChartMode('monthly')">Monthly</button>
+          <button class="btn btn-outline btn-sm" id="btn-yearly" onclick="setChartMode('yearly')">Yearly</button>
+        </div>
+      </div>
+      <!-- Period Stats -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid var(--border)">
+        <div style="padding:16px 20px;border-right:1px solid var(--border)">
+          <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--grey);font-family:'Barlow Condensed',sans-serif;margin-bottom:6px" id="periodLabel">Today</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--lime)" id="periodRevenue">Rs. 0</div>
+        </div>
+        <div style="padding:16px 20px;border-right:1px solid var(--border)">
+          <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--grey);font-family:'Barlow Condensed',sans-serif;margin-bottom:6px" id="periodInvLabel">Invoices</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--white)" id="periodInvCount">0</div>
+        </div>
+        <div style="padding:16px 20px;border-right:1px solid var(--border)">
+          <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--grey);font-family:'Barlow Condensed',sans-serif;margin-bottom:6px">Avg Sale</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--white)" id="periodAvg">Rs. 0</div>
+        </div>
+        <div style="padding:16px 20px">
+          <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--grey);font-family:'Barlow Condensed',sans-serif;margin-bottom:6px">Top Item</div>
+          <div style="font-size:14px;font-weight:600;color:var(--white);margin-top:4px" id="periodTop">—</div>
+        </div>
+      </div>
+      <!-- Chart Canvas -->
+      <div style="padding:20px;position:relative;height:260px">
+        <canvas id="salesChart"></canvas>
+        <div id="chartEmpty" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px">
+          <div style="font-size:36px;opacity:0.2">📊</div>
+          <div style="font-size:13px;color:var(--grey)">No sales data yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tables Row -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
       <div class="tbl-wrap"><div class="tbl-head"><h3>Recent Invoices</h3></div><table><thead><tr><th>#</th><th>Customer</th><th>Amount</th><th>Status</th></tr></thead><tbody id="dInvList"></tbody></table></div>
       <div class="tbl-wrap"><div class="tbl-head"><h3>Active Repairs</h3></div><table><thead><tr><th>Device</th><th>Customer</th><th>Status</th></tr></thead><tbody id="dRepList"></tbody></table></div>
@@ -601,6 +643,7 @@ function renderDash(){
   document.getElementById('dInvList').innerHTML=ri.length?ri.map(i=>`<tr><td class="text-lime" style="font-family:'Bebas Neue',sans-serif">#${i.num}</td><td>${i.customer}</td><td>${fm(i.total)}</td><td>${bdg(i.status)}</td></tr>`).join(''):'<tr><td colspan="4"><div class="empty"><div class="ei">🧾</div><p>No invoices yet</p></div></td></tr>';
   const ar=data.repairs.filter(r=>!['Completed','Cancelled'].includes(r.status)).slice(0,6);
   document.getElementById('dRepList').innerHTML=ar.length?ar.map(r=>`<tr><td>${r.brand} ${r.model}</td><td>${r.customer}</td><td>${bdg(r.status)}</td></tr>`).join(''):'<tr><td colspan="3"><div class="empty"><div class="ei">🔧</div><p>No active repairs</p></div></td></tr>';
+  if(curPage==='dashboard')renderSalesChart();
 }
 
 // ===== INVOICES =====
@@ -886,6 +929,137 @@ async function showQR(id){
 }
 function dlQR(){const c=document.querySelector('#qrBox canvas');if(!c)return;const a=document.createElement('a');a.download=`NuwanFix-${curQRInv?.num||'QR'}.png`;a.href=c.toDataURL('image/png');a.click();}
 function waQR(){if(curQRInv)waInv(curQRInv.id);}
+
+// ===== SALES CHART =====
+let chartInstance=null, chartMode='daily';
+
+function setChartMode(mode){
+  chartMode=mode;
+  ['daily','monthly','yearly'].forEach(m=>{
+    const b=document.getElementById('btn-'+m);
+    b.className=m===mode?'btn btn-lime btn-sm':'btn btn-outline btn-sm';
+  });
+  renderSalesChart();
+}
+
+function loadChartJS(){
+  return new Promise(res=>{
+    if(window.Chart){res();return;}
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+    s.onload=res;document.head.appendChild(s);
+  });
+}
+
+async function renderSalesChart(){
+  await loadChartJS();
+
+  const paid=data.invoices.filter(i=>i.status==='Paid'&&i.date);
+  const now=new Date();
+
+  let labels=[], values=[], periodInvs=[], periodLabel='', periodInvLabel='Invoices';
+
+  if(chartMode==='daily'){
+    // Last 14 days
+    periodLabel='Today';
+    for(let i=13;i>=0;i--){
+      const d=new Date(now);d.setDate(d.getDate()-i);
+      const key=d.toISOString().split('T')[0];
+      const label=i===0?'Today':i===1?'Yesterday':`${d.getDate()}/${d.getMonth()+1}`;
+      labels.push(label);
+      const dayInvs=paid.filter(inv=>inv.date===key);
+      values.push(dayInvs.reduce((a,inv)=>a+Number(inv.total||0),0));
+      if(i===0)periodInvs=dayInvs;
+    }
+  } else if(chartMode==='monthly'){
+    // Last 12 months
+    periodLabel='This Month';
+    const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    for(let i=11;i>=0;i--){
+      const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+      const y=d.getFullYear(),m=d.getMonth();
+      labels.push(months[m]+(i>0&&d.getFullYear()!==now.getFullYear()?` '${String(y).slice(-2)}`:''));
+      const mInvs=paid.filter(inv=>{if(!inv.date)return false;const id=new Date(inv.date);return id.getFullYear()===y&&id.getMonth()===m;});
+      values.push(mInvs.reduce((a,inv)=>a+Number(inv.total||0),0));
+      if(i===0)periodInvs=mInvs;
+    }
+  } else {
+    // Last 5 years
+    periodLabel='This Year';
+    for(let i=4;i>=0;i--){
+      const y=now.getFullYear()-i;
+      labels.push(String(y));
+      const yInvs=paid.filter(inv=>{if(!inv.date)return false;return new Date(inv.date).getFullYear()===y;});
+      values.push(yInvs.reduce((a,inv)=>a+Number(inv.total||0),0));
+      if(i===0)periodInvs=yInvs;
+    }
+  }
+
+  // Period stats
+  const periodRev=periodInvs.reduce((a,i)=>a+Number(i.total||0),0);
+  const periodCount=periodInvs.length;
+  const periodAvg=periodCount>0?periodRev/periodCount:0;
+
+  // Top item this period
+  const itemCount={};
+  periodInvs.forEach(inv=>(inv.items||[]).forEach(it=>{itemCount[it.desc]=(itemCount[it.desc]||0)+(it.qty||1);}));
+  const topItem=Object.entries(itemCount).sort((a,b)=>b[1]-a[1])[0];
+
+  document.getElementById('periodLabel').textContent=periodLabel+' Revenue';
+  document.getElementById('periodRevenue').textContent=fm(periodRev);
+  document.getElementById('periodInvCount').textContent=periodCount;
+  document.getElementById('periodAvg').textContent=fm(periodAvg);
+  document.getElementById('periodTop').textContent=topItem?topItem[0]:'—';
+
+  // Show/hide empty state
+  const hasData=values.some(v=>v>0);
+  document.getElementById('chartEmpty').style.display=hasData?'none':'flex';
+
+  // Draw chart
+  const ctx=document.getElementById('salesChart').getContext('2d');
+  if(chartInstance)chartInstance.destroy();
+  chartInstance=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[{
+        label:'Revenue (Rs.)',
+        data:values,
+        backgroundColor:values.map(v=>v>0?'rgba(200,241,53,0.85)':'rgba(200,241,53,0.15)'),
+        borderColor:values.map(v=>v>0?'#C8F135':'rgba(200,241,53,0.3)'),
+        borderWidth:1,
+        borderRadius:4,
+        hoverBackgroundColor:'#C8F135',
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'#1a1a1a',
+          borderColor:'rgba(200,241,53,0.3)',
+          borderWidth:1,
+          titleColor:'#888',
+          bodyColor:'#C8F135',
+          bodyFont:{family:'Bebas Neue',size:18},
+          callbacks:{label:ctx=>'Rs. '+Number(ctx.raw).toLocaleString('en-LK')}
+        }
+      },
+      scales:{
+        x:{
+          grid:{color:'rgba(255,255,255,0.04)'},
+          ticks:{color:'#666',font:{family:'Barlow Condensed',size:11},maxRotation:0}
+        },
+        y:{
+          grid:{color:'rgba(255,255,255,0.04)'},
+          ticks:{color:'#666',font:{family:'Barlow Condensed',size:11},callback:v=>'Rs.'+Number(v).toLocaleString()},
+          beginAtZero:true
+        }
+      }
+    }
+  });
+}
 
 // ===== INIT =====
 document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
