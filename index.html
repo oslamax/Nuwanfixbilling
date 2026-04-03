@@ -187,7 +187,6 @@ select option{background:var(--black)}textarea{resize:vertical;min-height:72px}
   <div class="content page active" id="page-dashboard">
     <!-- Stats Row -->
     <div class="stats-row">
-      <div class="stat-card"><div class="stat-label">Total Revenue</div><div class="stat-value lime" id="dRevenue">Rs. 0</div><div class="stat-sub">All paid invoices</div></div>
       <div class="stat-card"><div class="stat-label">Invoices</div><div class="stat-value" id="dInvoices">0</div><div class="stat-sub">Total created</div></div>
       <div class="stat-card"><div class="stat-label">Active Repairs</div><div class="stat-value" id="dRepairs">0</div><div class="stat-sub">In progress</div></div>
       <div class="stat-card"><div class="stat-label">Customers</div><div class="stat-value" id="dCustomers">0</div><div class="stat-sub">Registered</div></div>
@@ -272,8 +271,9 @@ select option{background:var(--black)}textarea{resize:vertical;min-height:72px}
     </div>
 
     <!-- Period Stats -->
-    <div class="stats-row" style="grid-template-columns:repeat(4,1fr)">
-      <div class="stat-card"><div class="stat-label" id="pyPeriodLbl">Today's Income</div><div class="stat-value lime" id="pyRevenue">Rs. 0</div></div>
+    <div class="stats-row" style="grid-template-columns:repeat(5,1fr)">
+      <div class="stat-card"><div class="stat-label">Total Revenue</div><div class="stat-value lime" id="dRevenue" style="font-size:26px;padding-top:6px">Rs. 0</div><div class="stat-sub">All time paid</div></div>
+      <div class="stat-card"><div class="stat-label" id="pyPeriodLbl">Today's Income</div><div class="stat-value lime" id="pyRevenue" style="font-size:26px;padding-top:6px">Rs. 0</div></div>
       <div class="stat-card"><div class="stat-label">Transactions</div><div class="stat-value" id="pyCount">0</div></div>
       <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value" id="pyPend" style="color:var(--orange)">Rs. 0</div></div>
       <div class="stat-card"><div class="stat-label">Avg Transaction</div><div class="stat-value" id="pyAvg" style="font-size:22px;padding-top:8px">Rs. 0</div></div>
@@ -674,8 +674,6 @@ function confirmDelete(){
 
 // ===== DASHBOARD =====
 function renderDash(){
-  const rev=data.invoices.filter(i=>i.status==='Paid').reduce((a,i)=>a+Number(i.total||0),0);
-  document.getElementById('dRevenue').textContent=fm(rev);
   document.getElementById('dInvoices').textContent=data.invoices.length;
   document.getElementById('dRepairs').textContent=data.repairs.filter(r=>!['Completed','Cancelled'].includes(r.status)).length;
   document.getElementById('dCustomers').textContent=data.customers.length;
@@ -916,7 +914,8 @@ async function renderPayments(){
   }
 
   // Stats
-  const periodPaid=filteredInvs.filter(x=>x.status==='Paid').reduce((a,x)=>a+Number(x.total||0),0);
+  const totalRevAllTime=data.invoices.filter(i=>i.status==='Paid').reduce((a,i)=>a+Number(i.total||0),0);
+  document.getElementById('dRevenue').textContent=fm(totalRevAllTime);
   const periodPend=filteredInvs.filter(x=>x.status==='Pending').reduce((a,x)=>a+Number(x.total||0),0);
   const periodCount=filteredInvs.length;
   const periodAvg=periodCount>0?periodPaid/Math.max(filteredInvs.filter(x=>x.status==='Paid').length,1):0;
