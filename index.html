@@ -324,10 +324,10 @@ select option{background:var(--black)}textarea{resize:vertical;min-height:72px}
       <div class="tbl-wrap">
         <div class="tbl-head"><h3>Stock Items</h3><button class="btn btn-lime btn-sm" onclick="openItemModal()">+ Add Item</button></div>
         <div style="padding:8px 14px;border-bottom:1px solid var(--border)"><input type="text" placeholder="Search stock..." oninput="renderStock(this.value)" style="background:none;border:none;width:100%;font-size:13px;color:var(--white);outline:none"></div>
-        <table><thead><tr><th>Item</th><th>Category</th><th>Qty</th><th>Sell Price</th><th>Actions</th></tr></thead><tbody id="stockList"></tbody></table>
+        <table><thead><tr><th>Item</th><th>Brand</th><th>Supplier</th><th>Category</th><th>Qty</th><th>Sell Price</th><th>Actions</th></tr></thead><tbody id="stockList"></tbody></table>
       </div>
       <div class="tbl-wrap"><div class="tbl-head"><h3>GRN Records</h3><button class="btn btn-lime btn-sm" onclick="openGRNModal()">+ New GRN</button></div>
-      <table><thead><tr><th>GRN #</th><th>Date</th><th>Supplier</th><th>Items</th><th>Total</th></tr></thead><tbody id="grnList"></tbody></table></div>
+      <table><thead><tr><th>GRN #</th><th>Date</th><th>Supplier</th><th>Items</th><th>Total</th><th>Actions</th></tr></thead><tbody id="grnList"></tbody></table></div>
     </div>
     <div class="tbl-wrap" id="lowSection" style="display:none">
       <div class="tbl-head"><h3 style="color:var(--orange)">⚠ Low Stock Alerts</h3></div>
@@ -471,19 +471,103 @@ select option{background:var(--black)}textarea{resize:vertical;min-height:72px}
 
 <!-- STOCK ITEM MODAL -->
 <div class="modal-overlay" id="itemModal">
-  <div class="modal" style="max-width:520px">
+  <div class="modal" style="max-width:620px">
     <div class="modal-hdr"><h2 id="itemTitle">Add Stock Item</h2><button class="modal-close" onclick="closeModal('itemModal')">✕</button></div>
     <div class="modal-body">
+
+      <!-- Category selector — changes visible fields -->
+      <div class="fg" style="margin-bottom:4px">
+        <div class="f full">
+          <label>Category *</label>
+          <select id="s_cat" onchange="toggleItemFields()">
+            <option value="Screens">Screens</option>
+            <option value="Batteries">Batteries</option>
+            <option value="Charging Ports">Charging Ports</option>
+            <option value="Cameras">Cameras</option>
+            <option value="Back Covers">Back Covers</option>
+            <option value="Tools">Tools</option>
+            <option value="Accessories">Accessories</option>
+            <option value="Phones">Phones</option>
+            <option value="Other Parts">Other Parts</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- COMMON FIELDS -->
       <div class="fg">
         <div class="f full"><label>Item Name *</label><input type="text" id="s_name" placeholder="e.g. Samsung A54 Screen"></div>
-        <div class="f"><label>Category</label><select id="s_cat"><option>Screens</option><option>Batteries</option><option>Charging Ports</option><option>Cameras</option><option>Back Covers</option><option>Tools</option><option>Accessories</option><option>Phones</option><option>Other Parts</option></select></div>
+        <div class="f"><label>Brand</label>
+          <select id="s_brand">
+            <option value="">— Select Brand —</option>
+            <option>Samsung</option><option>Apple</option><option>Xiaomi</option>
+            <option>Huawei</option><option>Oppo</option><option>Vivo</option>
+            <option>Realme</option><option>Nokia</option><option>Motorola</option>
+            <option>OnePlus</option><option>Generic</option><option>Other</option>
+          </select>
+        </div>
+        <div class="f"><label>Supplier</label><input type="text" id="s_supplier" placeholder="Supplier / Shop name" list="supplierDL"><datalist id="supplierDL"></datalist></div>
         <div class="f"><label>Unit</label><select id="s_unit"><option>Pcs</option><option>Sets</option><option>Boxes</option><option>Pairs</option></select></div>
-        <div class="f"><label>Current Qty</label><input type="number" id="s_qty" placeholder="0" min="0"></div>
+        <div class="f"><label>Current Qty</label><input type="number" id="s_qty" placeholder="0" min="0" oninput="syncIMEIs()"></div>
         <div class="f"><label>Min Stock Level</label><input type="number" id="s_min" placeholder="5" min="0"></div>
         <div class="f"><label>Cost Price (Rs.)</label><input type="number" id="s_cost" placeholder="0" min="0"></div>
         <div class="f"><label>Selling Price (Rs.)</label><input type="number" id="s_sell" placeholder="0" min="0"></div>
-        <div class="f full"><label>Notes</label><input type="text" id="s_notes" placeholder="Compatible models, supplier..."></div>
+        <div class="f full"><label>Compatible Models / Notes</label><input type="text" id="s_notes" placeholder="e.g. A54, A53, A52..."></div>
       </div>
+
+      <!-- PHONE-SPECIFIC FIELDS -->
+      <div id="phoneFields" style="display:none">
+        <div class="divider"></div>
+        <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--lime);font-family:'Barlow Condensed',sans-serif;margin-bottom:12px;font-weight:600">📱 Phone Details</div>
+        <div class="fg">
+          <div class="f"><label>Model</label><input type="text" id="s_model" placeholder="e.g. Galaxy A54 5G"></div>
+          <div class="f"><label>Color</label>
+            <select id="s_color">
+              <option value="">— Select Color —</option>
+              <option>Black</option><option>White</option><option>Blue</option>
+              <option>Green</option><option>Purple</option><option>Gold</option>
+              <option>Silver</option><option>Red</option><option>Pink</option>
+              <option>Grey</option><option>Yellow</option><option>Other</option>
+            </select>
+          </div>
+          <div class="f"><label>Storage</label>
+            <select id="s_storage">
+              <option value="">— Storage —</option>
+              <option>16GB</option><option>32GB</option><option>64GB</option>
+              <option>128GB</option><option>256GB</option><option>512GB</option><option>1TB</option>
+            </select>
+          </div>
+          <div class="f"><label>RAM</label>
+            <select id="s_ram">
+              <option value="">— RAM —</option>
+              <option>2GB</option><option>3GB</option><option>4GB</option>
+              <option>6GB</option><option>8GB</option><option>12GB</option><option>16GB</option>
+            </select>
+          </div>
+          <div class="f"><label>Condition</label>
+            <select id="s_condition">
+              <option>New</option><option>Used — Like New</option>
+              <option>Used — Good</option><option>Used — Fair</option><option>Refurbished</option>
+            </select>
+          </div>
+          <div class="f"><label>Network</label>
+            <select id="s_network">
+              <option value="">— Network —</option>
+              <option>Unlocked</option><option>Dialog</option><option>Mobitel</option>
+              <option>Hutch</option><option>Airtel</option><option>Any Network</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- IMEI section -->
+        <div style="margin-top:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <label style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--grey);font-family:'Barlow Condensed',sans-serif;font-weight:700">IMEI Numbers <span id="imeiQtyHint" style="color:var(--lime)"></span></label>
+          </div>
+          <div id="imeiContainer"></div>
+          <div style="font-size:11px;color:var(--grey);margin-top:6px">Qty field change කරොත් IMEI fields auto-generate වෙනවා.</div>
+        </div>
+      </div>
+
     </div>
     <div class="modal-foot">
       <button class="btn btn-outline" onclick="closeModal('itemModal')">Cancel</button>
@@ -495,7 +579,7 @@ select option{background:var(--black)}textarea{resize:vertical;min-height:72px}
 <!-- GRN MODAL -->
 <div class="modal-overlay" id="grnModal">
   <div class="modal">
-    <div class="modal-hdr"><h2>New GRN</h2><button class="modal-close" onclick="closeModal('grnModal')">✕</button></div>
+    <div class="modal-hdr"><h2 id="grnModalTitle">New GRN</h2><button class="modal-close" onclick="closeModal('grnModal')">✕</button></div>
     <div class="modal-body">
       <div class="fg">
         <div class="f"><label>Date *</label><input type="date" id="g_date"></div>
@@ -781,7 +865,10 @@ function openInvModal(id=null){
 
 function addInvRow(it=null){
   const r=document.createElement('div');r.className='irow';
-  r.innerHTML=`<input type="text" placeholder="Item description" value="${it?it.desc:''}" oninput="calcInv()"><input type="number" placeholder="1" value="${it?it.qty:1}" min="1" oninput="calcInv()"><input type="number" placeholder="0.00" value="${it?it.price:''}" min="0" oninput="calcInv()"><button class="rm-btn" onclick="this.parentElement.remove();calcInv()">✕</button>`;
+  const desc=it?(it.desc||'').replace(/"/g,'&quot;'):'';
+  const qty=it?it.qty:1;
+  const price=it?it.price:'';
+  r.innerHTML=`<input type="text" placeholder="Item description" value="${desc}" oninput="calcInv()"><input type="number" placeholder="1" value="${qty}" min="1" oninput="calcInv()"><input type="number" placeholder="0.00" value="${price}" min="0" oninput="calcInv()"><button class="rm-btn" onclick="this.parentElement.remove();calcInv()">✕</button>`;
   document.getElementById('invItems').appendChild(r);
 }
 
@@ -1077,33 +1164,179 @@ function renderGRN(){
 
   document.getElementById('stockList').innerHTML=stock.length?stock.map(s=>{
     const isLow=Number(s.qty||0)<=Number(s.min||5);
-    return `<tr><td><div style="font-weight:600">${s.name}</div><div style="font-size:11px;color:var(--grey)">${s.notes||''}</div></td><td><span class="badge bl">${s.category||'—'}</span></td><td><span style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:${isLow?'var(--red)':'var(--lime)'}">${s.qty}</span> <span style="font-size:11px;color:var(--grey)">${s.unit||'Pcs'}</span></td><td style="color:var(--grey)">${fm(s.sell||0)}</td><td><div style="display:flex;gap:5px"><button class="btn btn-lime btn-sm" onclick="quickStock('${s.id}')">+</button><button class="btn btn-outline btn-sm" onclick="openItemModal('${s.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="askDelete('stock','${s.id}')">🗑</button></div></td></tr>`;
-  }).join(''):'<tr><td colspan="5"><div class="empty"><div class="ei">📦</div><p>No stock items yet</p></div></td></tr>';
+    const isPhone=s.category==='Phones';
+    const nameExtra=isPhone?`<div style="font-size:10px;color:var(--grey);margin-top:1px">${[s.model,s.color,s.storage,s.ram].filter(Boolean).join(' · ')}</div>`:(s.notes?`<div style="font-size:10px;color:var(--grey)">${s.notes}</div>`:'');
+    const imeiBadge=isPhone&&(s.imeis||[]).length?`<div style="font-size:10px;color:var(--blue);margin-top:2px">IMEI: ${(s.imeis||[]).join(' / ')}</div>`:'';
+    return `<tr>
+      <td><div style="font-weight:600">${s.name}</div>${nameExtra}${imeiBadge}</td>
+      <td style="color:var(--white)">${s.brand||'—'}</td>
+      <td style="color:var(--grey);font-size:12px">${s.supplier||'—'}</td>
+      <td><span class="badge bl">${s.category||'—'}</span>${isPhone&&s.condition?`<div style="font-size:10px;color:var(--grey);margin-top:2px">${s.condition}</div>`:''}</td>
+      <td><span style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:${isLow?'var(--red)':'var(--lime)'}">${s.qty}</span> <span style="font-size:11px;color:var(--grey)">${s.unit||'Pcs'}</span></td>
+      <td style="color:var(--grey)">${fm(s.sell||0)}</td>
+      <td><div style="display:flex;gap:5px"><button class="btn btn-lime btn-sm" onclick="quickStock('${s.id}')">+</button><button class="btn btn-outline btn-sm" onclick="openItemModal('${s.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="askDelete('stock','${s.id}')">🗑</button></div></td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="7"><div class="empty"><div class="ei">📦</div><p>No stock items yet</p></div></td></tr>';
 
-  document.getElementById('grnList').innerHTML=grns.length?[...grns].reverse().map(g=>`<tr><td style="color:var(--lime);font-family:'Bebas Neue',sans-serif;font-size:15px">GRN#${g.num}</td><td style="color:var(--grey)">${fd(g.date)}</td><td>${g.supplier||'—'}</td><td style="color:var(--grey)">${(g.items||[]).length} items</td><td>${fm(g.total)}</td></tr>`).join(''):'<tr><td colspan="5"><div class="empty"><div class="ei">📋</div><p>No GRN records</p></div></td></tr>';
+  document.getElementById('grnList').innerHTML=grns.length?[...grns].reverse().map(g=>`<tr>
+    <td style="color:var(--lime);font-family:'Bebas Neue',sans-serif;font-size:15px">GRN#${g.num}</td>
+    <td style="color:var(--grey)">${fd(g.date)}</td>
+    <td>${g.supplier||'—'}</td>
+    <td style="color:var(--grey)">${(g.items||[]).length} items</td>
+    <td>${fm(g.total)}</td>
+    <td><button class="btn btn-outline btn-sm" onclick="openGRNModal('${g.id}')">✏️ Edit</button></td>
+  </tr>`).join(''):'<tr><td colspan="6"><div class="empty"><div class="ei">📋</div><p>No GRN records</p></div></td></tr>';
 
   const ls=document.getElementById('lowSection');ls.style.display=low.length?'':'none';
   document.getElementById('lowList').innerHTML=low.map(s=>`<tr><td style="font-weight:600">${s.name}</td><td><span class="badge bl">${s.category||'—'}</span></td><td style="color:var(--red);font-family:'Bebas Neue',sans-serif;font-size:18px">${s.qty} ${s.unit||'Pcs'}</td><td style="color:var(--grey)">${s.min||5} ${s.unit||'Pcs'}</td><td><button class="btn btn-lime btn-sm" onclick="quickStock('${s.id}')">+ Reorder</button></td></tr>`).join('');
 }
 
 function renderStock(f=''){
-  const stock=(data.stock||[]).filter(s=>!f||s.name.toLowerCase().includes(f.toLowerCase())||(s.category||'').toLowerCase().includes(f.toLowerCase()));
+  const stock=(data.stock||[]).filter(s=>!f||s.name.toLowerCase().includes(f.toLowerCase())||(s.category||'').toLowerCase().includes(f.toLowerCase())||(s.brand||'').toLowerCase().includes(f.toLowerCase())||(s.supplier||'').toLowerCase().includes(f.toLowerCase())||(s.imeis||[]).some(i=>i.includes(f)));
   document.getElementById('stockList').innerHTML=stock.length?stock.map(s=>{
     const isLow=Number(s.qty||0)<=Number(s.min||5);
-    return `<tr><td><div style="font-weight:600">${s.name}</div><div style="font-size:11px;color:var(--grey)">${s.notes||''}</div></td><td><span class="badge bl">${s.category||'—'}</span></td><td><span style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:${isLow?'var(--red)':'var(--lime)'}">${s.qty}</span></td><td style="color:var(--grey)">${fm(s.sell||0)}</td><td><div style="display:flex;gap:5px"><button class="btn btn-lime btn-sm" onclick="quickStock('${s.id}')">+</button><button class="btn btn-outline btn-sm" onclick="openItemModal('${s.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="askDelete('stock','${s.id}')">🗑</button></div></td></tr>`;
-  }).join(''):'<tr><td colspan="5"><div class="empty"><div class="ei">🔍</div><p>No items found</p></div></td></tr>';
+    const isPhone=s.category==='Phones';
+    const nameExtra=isPhone?`<div style="font-size:10px;color:var(--grey);margin-top:1px">${[s.model,s.color,s.storage,s.ram].filter(Boolean).join(' · ')}</div>`:(s.notes?`<div style="font-size:10px;color:var(--grey)">${s.notes}</div>`:'');
+    const imeiBadge=isPhone&&(s.imeis||[]).length?`<div style="font-size:10px;color:var(--blue);margin-top:2px">IMEI: ${(s.imeis||[]).join(' / ')}</div>`:'';
+    return `<tr>
+      <td><div style="font-weight:600">${s.name}</div>${nameExtra}${imeiBadge}</td>
+      <td style="color:var(--white)">${s.brand||'—'}</td>
+      <td style="color:var(--grey);font-size:12px">${s.supplier||'—'}</td>
+      <td><span class="badge bl">${s.category||'—'}</span></td>
+      <td><span style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:${isLow?'var(--red)':'var(--lime)'}">${s.qty}</span></td>
+      <td style="color:var(--grey)">${fm(s.sell||0)}</td>
+      <td><div style="display:flex;gap:5px"><button class="btn btn-lime btn-sm" onclick="quickStock('${s.id}')">+</button><button class="btn btn-outline btn-sm" onclick="openItemModal('${s.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="askDelete('stock','${s.id}')">🗑</button></div></td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="7"><div class="empty"><div class="ei">🔍</div><p>No items found</p></div></td></tr>';
+}
+
+function toggleItemFields(){
+  const cat=document.getElementById('s_cat').value;
+  document.getElementById('phoneFields').style.display=cat==='Phones'?'block':'none';
+  // Auto-set unit for phones
+  if(cat==='Phones')document.getElementById('s_unit').value='Pcs';
+}
+
+function syncIMEIs(){
+  const cat=document.getElementById('s_cat').value;
+  if(cat!=='Phones')return;
+  const qty=parseInt(document.getElementById('s_qty').value)||0;
+  const c=document.getElementById('imeiContainer');
+  const existing=[...c.querySelectorAll('input')].map(i=>i.value);
+  c.innerHTML='';
+  const hint=document.getElementById('imeiQtyHint');
+  if(hint)hint.textContent=qty?`(${qty} phone${qty>1?'s':''}  →  ${qty} IMEI${qty>1?'s':''})`:' ';
+  for(let i=0;i<qty;i++){
+    const val=existing[i]||'';
+    const row=document.createElement('div');
+    row.style.cssText='display:grid;grid-template-columns:28px 1fr;gap:8px;margin-bottom:8px;align-items:center';
+    row.innerHTML=`<div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--lime);text-align:center">${i+1}</div><input type="text" placeholder="Phone ${i+1} IMEI (15 digits)" value="${val}" maxlength="20" style="background:var(--black);border:1px solid var(--border);color:var(--white);padding:9px 12px;font-family:monospace;font-size:13px;outline:none;width:100%;letter-spacing:1px;transition:border-color 0.2s" oninput="const v=this.value.replace(/\D/g,'');this.style.borderColor=v.length===15?'var(--lime)':v.length>0?'var(--orange)':'var(--border)'">`;
+    c.appendChild(row);
+  }
+  if(qty===0){
+    c.innerHTML='<div style="font-size:12px;color:var(--grey);padding:8px 0">Qty field eke number dammam IMEI fields pennawa.</div>';
+  }
+}
+
+function updSupplierSuggestions(){
+  const suppliers=[...new Set((data.stock||[]).map(s=>s.supplier).filter(Boolean))];
+  const dl=document.getElementById('supplierDL');
+  if(dl)dl.innerHTML=suppliers.map(s=>`<option value="${s}">`).join('');
 }
 
 function openItemModal(id=null){
-  editItemId=id;document.getElementById('itemTitle').textContent=id?'Edit Stock Item':'Add Stock Item';
-  if(id){const s=data.stock.find(x=>x.id===id);if(!s)return;document.getElementById('s_name').value=s.name;document.getElementById('s_cat').value=s.category||'Screens';document.getElementById('s_unit').value=s.unit||'Pcs';document.getElementById('s_qty').value=s.qty||0;document.getElementById('s_min').value=s.min||5;document.getElementById('s_cost').value=s.cost||0;document.getElementById('s_sell').value=s.sell||0;document.getElementById('s_notes').value=s.notes||'';}
-  else{['s_name','s_notes'].forEach(f=>document.getElementById(f).value='');document.getElementById('s_cat').value='Screens';document.getElementById('s_unit').value='Pcs';['s_qty','s_min','s_cost','s_sell'].forEach(f=>document.getElementById(f).value=f==='s_min'?5:0);}
+  editItemId=id;
+  document.getElementById('itemTitle').textContent=id?'Edit Stock Item':'Add Stock Item';
+  updSupplierSuggestions();
+
+  if(id){
+    const s=data.stock.find(x=>x.id===id);if(!s)return;
+    document.getElementById('s_cat').value=s.category||'Screens';
+    document.getElementById('s_name').value=s.name;
+    document.getElementById('s_brand').value=s.brand||'';
+    document.getElementById('s_supplier').value=s.supplier||'';
+    document.getElementById('s_unit').value=s.unit||'Pcs';
+    document.getElementById('s_qty').value=s.qty||0;
+    document.getElementById('s_min').value=s.min||5;
+    document.getElementById('s_cost').value=s.cost||0;
+    document.getElementById('s_sell').value=s.sell||0;
+    document.getElementById('s_notes').value=s.notes||'';
+    // Phone fields
+    if(s.category==='Phones'){
+      document.getElementById('s_model').value=s.model||'';
+      document.getElementById('s_color').value=s.color||'';
+      document.getElementById('s_storage').value=s.storage||'';
+      document.getElementById('s_ram').value=s.ram||'';
+      document.getElementById('s_condition').value=s.condition||'New';
+      document.getElementById('s_network').value=s.network||'';
+      // Pre-fill existing IMEIs then sync layout
+      const existingImeis=s.imeis||[];
+      const qty2=s.qty||0;
+      const c2=document.getElementById('imeiContainer');c2.innerHTML='';
+      const hint2=document.getElementById('imeiQtyHint');
+      if(hint2)hint2.textContent=qty2?`(${qty2} phone${qty2>1?'s':''} → ${qty2} IMEI${qty2>1?'s':''})`:'';
+      for(let i2=0;i2<qty2;i2++){
+        const v2=existingImeis[i2]||'';
+        const row2=document.createElement('div');
+        row2.style.cssText='display:grid;grid-template-columns:28px 1fr;gap:8px;margin-bottom:8px;align-items:center';
+        row2.innerHTML=`<div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--lime);text-align:center">${i2+1}</div><input type="text" placeholder="Phone ${i2+1} IMEI (15 digits)" value="${v2}" maxlength="20" style="background:var(--black);border:1px solid var(--border);color:var(--white);padding:9px 12px;font-family:monospace;font-size:13px;outline:none;width:100%;letter-spacing:1px;transition:border-color 0.2s" oninput="const v=this.value.replace(/\\D/g,'');this.style.borderColor=v.length===15?'var(--lime)':v.length>0?'var(--orange)':'var(--border)'">`;
+        c2.appendChild(row2);
+      }
+      if(qty2===0)c2.innerHTML='<div style="font-size:12px;color:var(--grey);padding:8px 0">Qty field eke number dammam IMEI fields pennawa.</div>';
+    }
+  } else {
+    document.getElementById('s_cat').value='Screens';
+    document.getElementById('s_brand').value='';
+    document.getElementById('s_supplier').value='';
+    document.getElementById('s_unit').value='Pcs';
+    document.getElementById('s_model').value='';
+    document.getElementById('s_color').value='';
+    document.getElementById('s_storage').value='';
+    document.getElementById('s_ram').value='';
+    document.getElementById('s_condition').value='New';
+    document.getElementById('s_network').value='';
+    document.getElementById('imeiContainer').innerHTML='<div style="font-size:12px;color:var(--grey);padding:8px 0">Qty field eke number dammam IMEI fields pennawa.</div>';
+    document.getElementById('s_qty').value=0;
+    const hint3=document.getElementById('imeiQtyHint');if(hint3)hint3.textContent='';
+    ['s_name','s_notes','s_supplier'].forEach(f=>document.getElementById(f).value='');
+    ['s_qty','s_cost','s_sell'].forEach(f=>document.getElementById(f).value=0);
+    document.getElementById('s_min').value=5;
+  }
+  toggleItemFields();
   document.getElementById('itemModal').classList.add('open');
 }
 
 function saveItem(){
-  const name=document.getElementById('s_name').value.trim();if(!name){alert('Item name required!');return;}
-  const d={name,category:document.getElementById('s_cat').value,unit:document.getElementById('s_unit').value,qty:parseInt(document.getElementById('s_qty').value)||0,min:parseInt(document.getElementById('s_min').value)||5,cost:parseFloat(document.getElementById('s_cost').value)||0,sell:parseFloat(document.getElementById('s_sell').value)||0,notes:document.getElementById('s_notes').value};
+  const name=document.getElementById('s_name').value.trim();
+  if(!name){alert('Item name required!');return;}
+  const cat=document.getElementById('s_cat').value;
+
+  const d={
+    name,
+    category:cat,
+    brand:document.getElementById('s_brand').value,
+    supplier:document.getElementById('s_supplier').value,
+    unit:document.getElementById('s_unit').value,
+    qty:parseInt(document.getElementById('s_qty').value)||0,
+    min:parseInt(document.getElementById('s_min').value)||5,
+    cost:parseFloat(document.getElementById('s_cost').value)||0,
+    sell:parseFloat(document.getElementById('s_sell').value)||0,
+    notes:document.getElementById('s_notes').value,
+  };
+
+  // Phone-specific fields
+  if(cat==='Phones'){
+    d.model=document.getElementById('s_model').value;
+    d.color=document.getElementById('s_color').value;
+    d.storage=document.getElementById('s_storage').value;
+    d.ram=document.getElementById('s_ram').value;
+    d.condition=document.getElementById('s_condition').value;
+    d.network=document.getElementById('s_network').value;
+    // Collect IMEIs
+    d.imeis=[...document.querySelectorAll('#imeiContainer input')].map(i=>i.value.trim()).filter(Boolean);
+    if(!d.imeis.length&&d.qty>0){alert('Please enter at least one IMEI for phones!');return;}
+  }
+
   if(editItemId){Object.assign(data.stock.find(x=>x.id===editItemId),d);}
   else{if(!data.stock)data.stock=[];data.stock.push({id:'stk_'+Date.now(),...d});}
   closeModal('itemModal');renderGRN();schedulSync();
@@ -1116,11 +1349,34 @@ function quickStock(id){
   s.qty=Number(s.qty||0)+Number(q);renderGRN();schedulSync();
 }
 
-function openGRNModal(){
-  document.getElementById('g_date').value=new Date().toISOString().split('T')[0];
-  ['g_sup','g_bill','g_notes'].forEach(f=>document.getElementById(f).value='');
-  document.getElementById('g_method').value='Cash';
-  document.getElementById('grnItems').innerHTML='';addGRNRow();calcGRN();
+let editGRNId=null;
+
+function openGRNModal(id=null){
+  editGRNId=id;
+  document.getElementById('grnModalTitle').textContent=id?'Edit GRN':'New GRN';
+  if(id){
+    const g=data.grns.find(x=>x.id===id);if(!g)return;
+    document.getElementById('g_date').value=g.date||'';
+    document.getElementById('g_sup').value=g.supplier||'';
+    document.getElementById('g_bill').value=g.bill||'';
+    document.getElementById('g_method').value=g.method||'Cash';
+    document.getElementById('g_notes').value=g.notes||'';
+    document.getElementById('grnItems').innerHTML='';
+    (g.items||[]).forEach(it=>{
+      const row=document.createElement('div');
+      row.style.cssText='display:grid;grid-template-columns:2fr 1fr 1fr 32px;gap:8px;margin-bottom:8px;align-items:center';
+      const opts=(data.stock||[]).map(s=>`<option value="${s.id}" data-cost="${s.cost||0}"${s.id===it.itemId?' selected':''}>${s.name}</option>`).join('');
+      row.innerHTML=`<select onchange="grnFillCost(this)" style="background:var(--black);border:1px solid var(--border);color:var(--white);padding:8px 10px;font-size:13px;outline:none;width:100%"><option value="">— Select Item —</option>${opts}</select><input type="number" min="1" value="${it.qty||1}" oninput="calcGRN()" style="background:var(--black);border:1px solid var(--border);color:var(--white);padding:8px 10px;font-size:13px;outline:none;width:100%"><input type="number" min="0" value="${it.cost||0}" oninput="calcGRN()" class="gcost" style="background:var(--black);border:1px solid var(--border);color:var(--white);padding:8px 10px;font-size:13px;outline:none;width:100%"><button onclick="this.parentElement.remove();calcGRN()" style="background:none;border:1px solid rgba(255,68,68,0.3);color:var(--red);cursor:pointer;padding:7px;font-size:13px">✕</button>`;
+      document.getElementById('grnItems').appendChild(row);
+    });
+    calcGRN();
+  } else {
+    document.getElementById('g_date').value=new Date().toISOString().split('T')[0];
+    ['g_sup','g_bill','g_notes'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('g_method').value='Cash';
+    document.getElementById('grnItems').innerHTML='';
+    addGRNRow();calcGRN();
+  }
   document.getElementById('grnModal').classList.add('open');
 }
 
@@ -1140,15 +1396,21 @@ function saveGRN(){
   const date=document.getElementById('g_date').value;if(!date){alert('Date required!');return;}
   const rows=document.querySelectorAll('#grnItems > div');
   const items=[];let total=0;
+  // If editing, reverse old stock first
+  if(editGRNId){
+    const old=data.grns.find(x=>x.id===editGRNId);
+    if(old)(old.items||[]).forEach(oi=>{const s=data.stock.find(x=>x.id===oi.itemId);if(s)s.qty=Math.max(0,Number(s.qty||0)-Number(oi.qty||0));});
+  }
   rows.forEach(row=>{
     const sel=row.querySelector('select'),inp=row.querySelectorAll('input'),itemId=sel?.value,qty=parseInt(inp[0]?.value)||0,cost=parseFloat(inp[1]?.value)||0;
     if(itemId&&qty>0){const s=data.stock.find(x=>x.id===itemId);if(s){items.push({itemId,name:s.name,qty,cost,lineTotal:qty*cost});s.qty=Number(s.qty||0)+qty;total+=qty*cost;}}
   });
   if(!items.length){alert('Add at least one item!');return;}
-  if(!data.grns)data.grns=[];
-  data.grns.push({id:'grn_'+Date.now(),num:data.nextGRNNum++,date,supplier:document.getElementById('g_sup').value,bill:document.getElementById('g_bill').value,method:document.getElementById('g_method').value,notes:document.getElementById('g_notes').value,items,total});
+  const gd={date,supplier:document.getElementById('g_sup').value,bill:document.getElementById('g_bill').value,method:document.getElementById('g_method').value,notes:document.getElementById('g_notes').value,items,total};
+  if(editGRNId){Object.assign(data.grns.find(x=>x.id===editGRNId),gd);}
+  else{if(!data.grns)data.grns=[];data.grns.push({id:'grn_'+Date.now(),num:data.nextGRNNum++,...gd});}
   closeModal('grnModal');renderGRN();schedulSync();
-  alert(`✅ GRN saved! Stock updated for ${items.length} item(s).`);
+  alert(`✅ GRN ${editGRNId?'updated':'saved'}! Stock updated for ${items.length} item(s).`);
 }
 
 // ===== BARCODE =====
