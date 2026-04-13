@@ -115,6 +115,8 @@ select option{background:var(--black)}textarea{resize:vertical;min-height:72px}
 .irow input{padding:7px 10px}
 .rm-btn{background:none;border:1px solid rgba(255,68,68,0.3);color:var(--red);cursor:pointer;padding:7px;font-size:13px;transition:all 0.2s}.rm-btn:hover{background:rgba(255,68,68,0.1)}
 .add-row{background:none;border:1px dashed var(--border);color:var(--grey);cursor:pointer;padding:9px;width:100%;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:2px;text-transform:uppercase;transition:all 0.2s;margin-top:2px}.add-row:hover{border-color:var(--lime);color:var(--lime)}
+.irow:hover{background:rgba(200,241,53,0.04);outline:1px solid rgba(200,241,53,0.2);cursor:pointer}
+tr.stock-row:hover td{background:rgba(200,241,53,0.04)!important;}
 .totals{border-top:1px solid var(--border);padding-top:14px}
 .trow{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;color:var(--grey)}
 .trow.grand{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--lime);padding-top:10px;border-top:1px solid var(--border);margin-top:6px}
@@ -382,7 +384,10 @@ select option{background:var(--black)}textarea{resize:vertical;min-height:72px}
         <span></span>
       </div>
       <div id="invItems"></div>
-      <button class="add-row" onclick="addInvRow()">+ Add Item</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px">
+        <button class="add-row" onclick="addInvRow()" style="margin-top:0">+ Add Item</button>
+        <button class="add-row" onclick="openStockPicker()" style="margin-top:0;border-color:rgba(56,189,248,0.3);color:var(--blue)">📦 From Stock</button>
+      </div>
       <div class="divider"></div>
       <div class="totals">
         <div class="trow"><span>Subtotal</span><span id="i_sub">Rs. 0.00</span></div>
@@ -445,26 +450,65 @@ select option{background:var(--black)}textarea{resize:vertical;min-height:72px}
 
 <!-- COLLECT PAYMENT MODAL -->
 <div class="modal-overlay" id="payModal">
-  <div class="modal" style="max-width:480px">
-    <div class="modal-hdr"><h2>Collect Payment</h2><button class="modal-close" onclick="closeModal('payModal')">✕</button></div>
+  <div class="modal" style="max-width:640px">
+    <div class="modal-hdr"><h2>💳 Collect Payment</h2><button class="modal-close" onclick="closeModal('payModal')">✕</button></div>
     <div class="modal-body">
-      <div style="background:var(--black);border:1px solid var(--border);padding:18px;margin-bottom:20px" id="payRepSum"></div>
-      <div class="fg">
-        <div class="f"><label>Charge Amount (Rs.) *</label><input type="number" id="py_amt" placeholder="0" oninput="calcChange()"></div>
+
+      <!-- Repair summary strip -->
+      <div style="background:var(--black);border:1px solid var(--border);padding:14px 18px;margin-bottom:18px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px" id="payRepSum"></div>
+
+      <!-- Customer & payment info -->
+      <div class="fg" style="margin-bottom:4px">
+        <div class="f"><label>Customer</label><input type="text" id="py_cus" placeholder="Customer name"></div>
+        <div class="f"><label>Phone</label><input type="text" id="py_ph" placeholder="07X XXX XXXX"></div>
+        <div class="f"><label>Date</label><input type="date" id="py_date"></div>
         <div class="f"><label>Payment Method</label><select id="py_method"><option>Cash</option><option>Card</option><option>Bank Transfer</option><option>Online</option></select></div>
-        <div class="f"><label>Cash Received (Rs.)</label><input type="number" id="py_recv" placeholder="0" oninput="calcChange()"></div>
-        <div class="f"><label>Change</label><div id="py_change" style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--lime);padding-top:4px">Rs. 0.00</div></div>
-        <div class="f full"><label>Mark Repair As</label><select id="py_repSt"><option value="Completed">Completed</option><option value="Ready">Ready — collect later</option></select></div>
-        <div class="f full"><label>Notes</label><input type="text" id="py_notes" placeholder="Payment notes..."></div>
+        <div class="f"><label>Invoice Status</label><select id="py_status"><option value="Paid">Paid</option><option value="Pending">Pending</option><option value="Partial">Partial</option></select></div>
+        <div class="f"><label>Mark Repair As</label><select id="py_repSt"><option value="Completed">Completed</option><option value="Ready">Ready — collect later</option><option value="In Progress">In Progress</option></select></div>
       </div>
-      <div style="background:rgba(200,241,53,0.05);border:1px solid rgba(200,241,53,0.15);padding:14px;margin-top:12px;font-size:13px;color:rgba(255,255,255,0.6);line-height:2">
-        ✓ Invoice auto-created &nbsp; ✓ Repair status updated &nbsp; ✓ Google Sheets synced
+
+      <div class="divider"></div>
+      <div class="sec-title">Invoice Items</div>
+      <div class="irow" style="margin-bottom:4px">
+        <span style="font-size:10px;letter-spacing:2px;color:var(--grey);font-family:'Barlow Condensed',sans-serif;text-transform:uppercase">Description</span>
+        <span style="font-size:10px;letter-spacing:2px;color:var(--grey);font-family:'Barlow Condensed',sans-serif;text-transform:uppercase">Qty</span>
+        <span style="font-size:10px;letter-spacing:2px;color:var(--grey);font-family:'Barlow Condensed',sans-serif;text-transform:uppercase">Price</span>
+        <span></span>
       </div>
+      <div id="payItems"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px">
+        <button class="add-row" onclick="addPayRow()" style="margin-top:0">+ Add Item</button>
+        <button class="add-row" onclick="openPayStockPicker()" style="margin-top:0;border-color:rgba(56,189,248,0.3);color:var(--blue)">📦 From Stock</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Totals + cash -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+        <div>
+          <div class="f" style="margin-bottom:12px"><label>Discount (Rs.)</label><input type="number" id="py_disc" value="0" oninput="calcPayTotals()"></div>
+          <div class="f"><label>Notes</label><textarea id="py_notes" placeholder="Payment notes..." style="min-height:56px"></textarea></div>
+        </div>
+        <div>
+          <div class="totals" style="border-top:none;padding-top:0">
+            <div class="trow"><span>Subtotal</span><span id="py_sub">Rs. 0.00</span></div>
+            <div class="trow"><span>Discount</span><span id="py_dshow">- Rs. 0.00</span></div>
+            <div class="trow grand"><span>Total</span><span id="py_tot">Rs. 0.00</span></div>
+          </div>
+          <div class="divider" style="margin:10px 0"></div>
+          <div class="fg" style="grid-template-columns:1fr 1fr;gap:10px">
+            <div class="f"><label>Cash Received</label><input type="number" id="py_recv" placeholder="0" oninput="calcPayChange()"></div>
+            <div class="f"><label>Change</label><div id="py_change" style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--lime);padding-top:2px">Rs. 0.00</div></div>
+          </div>
+        </div>
+      </div>
+
     </div>
     <div class="modal-foot">
       <button class="btn btn-outline" onclick="closeModal('payModal')">Cancel</button>
+      <button class="btn btn-outline" onclick="printPayInv()">🖨 Print</button>
       <button class="btn btn-green" onclick="doCollect(true)">💬 Pay + WhatsApp</button>
-      <button class="btn btn-lime" onclick="doCollect(false)">💳 Confirm Payment</button>
+      <button class="btn btn-lime" onclick="doCollect(false)">✓ Confirm Payment</button>
     </div>
   </div>
 </div>
@@ -679,6 +723,70 @@ select option{background:var(--black)}textarea{resize:vertical;min-height:72px}
   </div>
 </div>
 
+<!-- STOCK PICKER MODAL -->
+<div class="modal-overlay" id="stockPickerModal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-hdr">
+      <h2>📦 Pick from Stock</h2>
+      <button class="modal-close" onclick="closeModal('stockPickerModal')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center">
+        <span style="color:var(--grey)">🔍</span>
+        <input type="text" id="spSearch" placeholder="Search stock items..." oninput="renderStockPicker(this.value)" style="background:none;border:none;flex:1;font-size:13px;color:var(--white);outline:none">
+        <select id="spCatFilter" onchange="renderStockPicker(document.getElementById('spSearch').value)" style="background:var(--black);border:1px solid var(--border);color:var(--white);padding:5px 8px;font-size:12px;outline:none;font-family:'Barlow Condensed',sans-serif">
+          <option value="">All Categories</option>
+          <option>Screens</option><option>Batteries</option><option>Charging Ports</option>
+          <option>Cameras</option><option>Back Covers</option><option>Tools</option>
+          <option>Accessories</option><option>Phones</option><option>Other Parts</option>
+        </select>
+      </div>
+      <div id="spList" style="max-height:380px;overflow-y:auto"></div>
+    </div>
+    <div class="modal-foot" style="justify-content:space-between;align-items:center">
+      <span id="spSelCount" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:1px;color:var(--grey)">No items selected</span>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline" onclick="closeModal('stockPickerModal')">Cancel</button>
+        <button class="btn btn-lime" onclick="addStockItemsToInv()">✓ Add to Invoice</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ITEM EDIT MODAL -->
+<div class="modal-overlay" id="invItemEditModal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-hdr"><h2>Edit Item</h2><button class="modal-close" onclick="closeModal('invItemEditModal')">✕</button></div>
+    <div class="modal-body">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="f">
+          <label>Description *</label>
+          <input type="text" id="ie_desc" placeholder="Item description">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div class="f">
+            <label>Qty</label>
+            <input type="number" id="ie_qty" placeholder="1" min="1" oninput="calcItemEditTotal()">
+          </div>
+          <div class="f">
+            <label>Unit Price (Rs.)</label>
+            <input type="number" id="ie_price" placeholder="0.00" min="0" oninput="calcItemEditTotal()">
+          </div>
+        </div>
+        <div style="background:var(--black);border:1px solid var(--border);padding:14px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--grey)">Line Total</span>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--lime)" id="ie_total">Rs. 0.00</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" onclick="deleteItemRow()">🗑 Remove</button>
+      <button class="btn btn-outline" onclick="closeModal('invItemEditModal')">Cancel</button>
+      <button class="btn btn-lime" onclick="saveItemEdit()">✓ Update Item</button>
+    </div>
+  </div>
+</div>
+
 <div class="print-area" id="printArea"></div>
 
 <script>
@@ -689,7 +797,7 @@ const DEL_PASS='nuwanfix123';
 
 // ===== STATE =====
 let data={invoices:[],repairs:[],customers:[],stock:[],grns:[],nextInvoiceNum:1001,nextRepairNum:1,nextGRNNum:1};
-let syncTimer=null,currentUser=null,pendingDelete=null,collectRepId=null,editInvId=null,editRepId=null,editCusId=null,editItemId=null,curQRInv=null;
+let syncTimer=null,currentUser=null,pendingDelete=null,collectRepId=null,editInvId=null,editRepId=null,editCusId=null,editItemId=null,curQRInv=null,editItemRowEl=null,spSelected={},spPhoneExpanded={};
 
 // ===== LOGIN =====
 function doLogin(){
@@ -864,12 +972,336 @@ function openInvModal(id=null){
 }
 
 function addInvRow(it=null){
-  const r=document.createElement('div');r.className='irow';
+  const r=document.createElement('div');r.className='irow';r.style.position='relative';
   const desc=it?(it.desc||'').replace(/"/g,'&quot;'):'';
   const qty=it?it.qty:1;
   const price=it?it.price:'';
-  r.innerHTML=`<input type="text" placeholder="Item description" value="${desc}" oninput="calcInv()"><input type="number" placeholder="1" value="${qty}" min="1" oninput="calcInv()"><input type="number" placeholder="0.00" value="${price}" min="0" oninput="calcInv()"><button class="rm-btn" onclick="this.parentElement.remove();calcInv()">✕</button>`;
+  r.innerHTML=`
+    <div style="position:relative">
+      <input type="text" placeholder="Type to search stock..." value="${desc}" oninput="showStockSuggest(this)" onblur="hideStockSuggest(this)" onkeydown="navStockSuggest(event,this)" autocomplete="off" style="width:100%">
+      <div class="stock-suggest" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--mid);border:1px solid var(--lime);border-top:none;z-index:9999;max-height:220px;overflow-y:auto"></div>
+    </div>
+    <input type="number" placeholder="1" value="${qty}" min="1" oninput="calcInv()">
+    <input type="number" placeholder="0.00" value="${price}" min="0" oninput="calcInv()">
+    <button class="rm-btn" onclick="this.closest('.irow').remove();calcInv()">✕</button>`;
+  r.style.cursor='pointer';
+  r.title='Click to edit item';
+  r.addEventListener('click',function(e){if(e.target.classList.contains('rm-btn')||e.target.tagName==='INPUT')return;openItemEditModal(r);});
   document.getElementById('invItems').appendChild(r);
+  // trigger calcInv if pre-filled
+  if(it)calcInv();
+}
+
+function showStockSuggest(inp){
+  calcInv();
+  const q=inp.value.trim().toLowerCase();
+  const drop=inp.parentElement.querySelector('.stock-suggest');
+  if(!q){drop.style.display='none';return;}
+  const stock=data.stock||[];
+  const matches=stock.filter(s=>
+    s.name.toLowerCase().includes(q)||
+    (s.brand||'').toLowerCase().includes(q)||
+    (s.category||'').toLowerCase().includes(q)||
+    (s.notes||'').toLowerCase().includes(q)||
+    (s.model||'').toLowerCase().includes(q)
+  ).slice(0,8);
+  if(!matches.length){drop.style.display='none';return;}
+  drop.innerHTML=matches.map((s,i)=>{
+    const isPhone=s.category==='Phones';
+    const sub=isPhone?[s.model,s.color,s.storage].filter(Boolean).join(' · '):(s.notes||'');
+    const stockBadge=Number(s.qty||0)<=0?`<span style="color:var(--red);font-size:10px">Out of stock</span>`:`<span style="color:var(--grey);font-size:10px">Qty: ${s.qty}</span>`;
+    return `<div class="ssi" data-idx="${i}" data-id="${s.id}" onmousedown="pickStockSuggest(event,'${s.id}',this)" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);gap:8px">
+      <div style="min-width:0">
+        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${isPhone?'📱 ':''}${s.name}${s.brand?' <span style="color:var(--grey);font-weight:400;font-size:11px">('+s.brand+')</span>':''}</div>
+        ${sub?`<div style="font-size:11px;color:var(--grey)">${sub}</div>`:''}
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--lime)">${fm(s.sell||0)}</div>
+        ${stockBadge}
+      </div>
+    </div>`;
+  }).join('');
+  drop.style.display='block';
+  drop.querySelectorAll('.ssi').forEach(el=>el.addEventListener('mouseover',()=>{
+    drop.querySelectorAll('.ssi').forEach(x=>x.style.background='');
+    el.style.background='rgba(200,241,53,0.08)';
+  }));
+}
+
+function hideStockSuggest(inp){
+  setTimeout(()=>{const d=inp.parentElement.querySelector('.stock-suggest');if(d)d.style.display='none';},150);
+}
+
+function navStockSuggest(e,inp){
+  const drop=inp.parentElement.querySelector('.stock-suggest');
+  if(!drop||drop.style.display==='none')return;
+  const items=[...drop.querySelectorAll('.ssi')];
+  const cur=drop.querySelector('.ssi[data-active]');
+  let idx=cur?parseInt(cur.dataset.idx):-1;
+  if(e.key==='ArrowDown'){e.preventDefault();idx=Math.min(idx+1,items.length-1);}
+  else if(e.key==='ArrowUp'){e.preventDefault();idx=Math.max(idx-1,0);}
+  else if(e.key==='Enter'&&cur){e.preventDefault();cur.dispatchEvent(new MouseEvent('mousedown'));return;}
+  else if(e.key==='Escape'){drop.style.display='none';return;}
+  else return;
+  items.forEach(x=>{delete x.dataset.active;x.style.background='';});
+  if(items[idx]){items[idx].dataset.active='1';items[idx].style.background='rgba(200,241,53,0.08)';items[idx].scrollIntoView({block:'nearest'});}
+}
+
+function pickStockSuggest(e,id,el){
+  e.preventDefault();
+  const s=data.stock.find(x=>x.id===id);if(!s)return;
+  const irow=el.closest('.irow');
+  const inputs=irow.querySelectorAll('input[type="text"],input[type="number"]');
+  const descInp=irow.querySelector('input[type="text"]');
+  const drop=descInp.parentElement.querySelector('.stock-suggest');
+
+  const isPhone=s.category==='Phones';
+  const imeis=s.imeis||[];
+
+  if(isPhone&&imeis.length){
+    // Show IMEI picker inline in dropdown
+    drop.innerHTML=`<div style="padding:8px 12px;font-size:11px;letter-spacing:2px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--border)">Select IMEI for ${s.name}</div>`+
+    imeis.map(imei=>`<div onmousedown="pickImeiSuggest(event,'${id}','${imei}')" style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border)" onmouseover="this.style.background='rgba(200,241,53,0.08)'" onmouseout="this.style.background=''">
+      <div style="font-family:monospace;font-size:12px;letter-spacing:1px;color:var(--white)">${imei}</div>
+      <div style="margin-left:auto;font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--lime)">${fm(s.sell||0)}</div>
+    </div>`).join('')+
+    `<div onmousedown="pickImeiSuggest(event,'${id}',null)" style="padding:8px 12px;cursor:pointer;font-size:12px;color:var(--grey)" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background=''">Add without IMEI</div>`;
+    return;
+  }
+
+  // Non-phone or phone without IMEIs — fill directly
+  const isPhoneSub=[s.model,s.color,s.storage].filter(Boolean).join(' · ');
+  const desc=s.name+(s.brand?' ('+s.brand+')':'')+(isPhone&&isPhoneSub?' — '+isPhoneSub:'');
+  descInp.value=desc;
+  const numInputs=irow.querySelectorAll('input[type="number"]');
+  numInputs[0].value=1;
+  numInputs[1].value=s.sell||0;
+  drop.style.display='none';
+  calcInv();
+}
+
+function pickImeiSuggest(e,id,imei){
+  e.preventDefault();
+  const s=data.stock.find(x=>x.id===id);if(!s)return;
+  const dropEl=e.currentTarget.closest('.stock-suggest');if(!dropEl)return;
+  const irow=dropEl.closest('.irow');if(!irow)return;
+  const isPhoneSub=[s.model,s.color,s.storage].filter(Boolean).join(' · ');
+  const desc=s.name+(s.brand?' ('+s.brand+')':'')+(isPhoneSub?' — '+isPhoneSub:'')+(imei?' | IMEI: '+imei:'');
+  irow.querySelector('input[type="text"]').value=desc;
+  const numInputs=irow.querySelectorAll('input[type="number"]');
+  numInputs[0].value=1;
+  numInputs[1].value=s.sell||0;
+  dropEl.style.display='none';
+  calcInv();
+}
+
+function openStockPicker(){
+  spSelected={};spPhoneExpanded={};
+  document.getElementById('spSearch').value='';
+  document.getElementById('spCatFilter').value='';
+  renderStockPicker('');
+  document.getElementById('stockPickerModal').classList.add('open');
+}
+
+function renderStockPicker(f=''){
+  const cat=document.getElementById('spCatFilter').value;
+  const fl=f.toLowerCase().trim();
+  const stock=(data.stock||[]).filter(s=>{
+    const matchCat=!cat||s.category===cat;
+    const matchQ=!fl||s.name.toLowerCase().includes(fl)||(s.brand||'').toLowerCase().includes(fl)||(s.category||'').toLowerCase().includes(fl)||(s.notes||'').toLowerCase().includes(fl);
+    return matchCat&&matchQ&&Number(s.qty||0)>0;
+  });
+
+  const container=document.getElementById('spList');
+  if(!stock.length){
+    container.innerHTML='<div class="empty" style="padding:40px 20px"><div class="ei">📦</div><p>No stock items found</p></div>';
+    return;
+  }
+
+  container.innerHTML=stock.map(s=>{
+    const isLow=Number(s.qty||0)<=Number(s.min||5);
+    const sel=spSelected[s.id];
+    const isPhone=s.category==='Phones';
+    const sub=isPhone?[s.model,s.color,s.storage].filter(Boolean).join(' · '):(s.notes||'');
+    const imeis=s.imeis||[];
+
+    if(isPhone){
+      // Phone: show each IMEI as selectable row
+      const imeiRows=imeis.length?imeis.map((imei,i)=>{
+        const isSel=sel&&sel.imei===imei;
+        return `<div onclick="event.stopPropagation();selectPhoneIMEI('${s.id}','${imei}')" style="display:flex;align-items:center;gap:10px;padding:7px 16px 7px 36px;cursor:pointer;background:${isSel?'rgba(200,241,53,0.12)':'rgba(0,0,0,0.2)'};border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.15s">
+          <div style="width:14px;height:14px;border-radius:50%;border:1.5px solid ${isSel?'var(--lime)':'var(--border)'};background:${isSel?'var(--lime)':'transparent'};flex-shrink:0;display:flex;align-items:center;justify-content:center">
+            ${isSel?'<div style="width:6px;height:6px;border-radius:50%;background:var(--black)"></div>':''}
+          </div>
+          <div>
+            <div style="font-family:monospace;font-size:12px;letter-spacing:1px;color:${isSel?'var(--lime)':'var(--white)'}">IMEI: ${imei}</div>
+            <div style="font-size:10px;color:var(--grey)">Phone ${i+1}</div>
+          </div>
+          ${isSel?`<div style="margin-left:auto;background:rgba(200,241,53,0.2);color:var(--lime);font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 7px">✓ Selected</div>`:''}
+        </div>`;
+      }).join(''):`<div style="padding:8px 36px;font-size:12px;color:var(--grey);font-style:italic">No IMEIs recorded — <span style="color:var(--lime);cursor:pointer" onclick="toggleSpItem('${s.id}')">add without IMEI</span></div>`;
+
+      return `<div id="sp_${s.id}" style="border-bottom:1px solid var(--border);background:${sel?'rgba(200,241,53,0.04)':'transparent'}">
+        <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:11px 16px;cursor:pointer" onclick="toggleSpPhoneExpand('${s.id}')">
+          <div>
+            <div style="font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px">
+              📱 ${s.name}
+              ${sel?`<span style="background:rgba(200,241,53,0.2);color:var(--lime);font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 7px">IMEI Selected</span>`:''}
+            </div>
+            <div style="font-size:11px;color:var(--grey);margin-top:2px">${s.brand||''}${s.brand&&sub?' · ':''}${sub} <span class="badge bl" style="font-size:9px;padding:2px 6px;margin-left:4px">Phone</span></div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--lime)">${fm(s.sell||0)}</div>
+            <div style="font-size:10px;color:var(--grey)">Qty: ${s.qty} · ${imeis.length} IMEI${imeis.length!==1?'s':''} <span style="color:var(--grey);margin-left:4px">${spPhoneExpanded[s.id]?'▲':'▼'}</span></div>
+          </div>
+        </div>
+        <div id="spimei_${s.id}" style="display:${spPhoneExpanded[s.id]?'block':'none'}">${imeiRows}</div>
+      </div>`;
+    }
+
+    // Non-phone item
+    return `<div id="sp_${s.id}" onclick="toggleSpItem('${s.id}')" style="display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;background:${sel?'rgba(200,241,53,0.07)':'transparent'}">
+      <div>
+        <div style="font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px">
+          ${s.name}
+          ${sel?`<span style="background:rgba(200,241,53,0.2);color:var(--lime);font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 7px">Selected</span>`:''}
+        </div>
+        <div style="font-size:11px;color:var(--grey);margin-top:2px">${s.brand||''}${s.brand&&sub?' · ':''}${sub} <span class="badge bl" style="font-size:9px;padding:2px 6px;margin-left:4px">${s.category||''}</span></div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--lime)">${fm(s.sell||0)}</div>
+        <div style="font-size:10px;color:${isLow?'var(--red)':'var(--grey)'}">Qty: ${s.qty} ${s.unit||'Pcs'}${isLow?' ⚠':''}</div>
+      </div>
+      <div onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:6px">
+        <button onclick="spChangeQty('${s.id}',-1)" style="background:var(--black);border:1px solid var(--border);color:var(--white);width:26px;height:26px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">−</button>
+        <input type="number" id="spq_${s.id}" value="${sel||1}" min="1" max="${s.qty}" style="width:42px;text-align:center;background:var(--black);border:1px solid var(--border);color:var(--white);padding:4px;font-size:13px;outline:none" oninput="spSetQty('${s.id}',this.value)">
+        <button onclick="spChangeQty('${s.id}',1)" style="background:var(--black);border:1px solid var(--border);color:var(--white);width:26px;height:26px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">+</button>
+      </div>
+    </div>`;
+  }).join('');
+  updSpCount();
+}
+
+function toggleSpPhoneExpand(id){
+  spPhoneExpanded[id]=!spPhoneExpanded[id];
+  renderStockPicker(document.getElementById('spSearch').value);
+}
+
+function selectPhoneIMEI(id,imei){
+  const s=data.stock.find(x=>x.id===id);if(!s)return;
+  // Toggle: if same IMEI already selected, deselect
+  if(spSelected[id]&&spSelected[id].imei===imei){
+    delete spSelected[id];
+  } else {
+    spSelected[id]={qty:1,imei,stockId:id};
+  }
+  renderStockPicker(document.getElementById('spSearch').value);
+}
+
+function toggleSpItem(id){
+  const s=data.stock.find(x=>x.id===id);if(!s)return;
+  if(s.category==='Phones'){
+    // For phones without IMEIs — toggle without IMEI
+    if(spSelected[id]){delete spSelected[id];}
+    else{spSelected[id]={qty:1,imei:null,stockId:id};}
+    renderStockPicker(document.getElementById('spSearch').value);
+    return;
+  }
+  if(spSelected[id]){
+    delete spSelected[id];
+  } else {
+    const qEl=document.getElementById('spq_'+id);
+    spSelected[id]=parseInt(qEl?qEl.value:1)||1;
+  }
+  renderStockPicker(document.getElementById('spSearch').value);
+}
+
+function spChangeQty(id,delta){
+  const s=data.stock.find(x=>x.id===id);if(!s)return;
+  const qEl=document.getElementById('spq_'+id);
+  let v=parseInt(qEl.value||1)+delta;
+  v=Math.max(1,Math.min(v,Number(s.qty||99)));
+  qEl.value=v;
+  if(spSelected[id])spSelected[id]=v;
+  updSpCount();
+}
+
+function spSetQty(id,val){
+  const v=parseInt(val)||1;
+  if(spSelected[id])spSelected[id]=v;
+  updSpCount();
+}
+
+function updSpCount(){
+  const n=Object.keys(spSelected).length;
+  document.getElementById('spSelCount').textContent=n?`${n} item${n>1?'s':''} selected`:'No items selected';
+  document.getElementById('spSelCount').style.color=n?'var(--lime)':'var(--grey)';
+}
+
+function addStockItemsToInv(){
+  const ids=Object.keys(spSelected);
+  if(!ids.length){alert('Select at least one item!');return;}
+  ids.forEach(id=>{
+    const s=data.stock.find(x=>x.id===id);if(!s)return;
+    const sel=spSelected[id];
+    const isPhone=s.category==='Phones';
+
+    if(isPhone){
+      const qty=1;
+      const imei=sel.imei;
+      const sub=[s.model,s.color,s.storage].filter(Boolean).join(' · ');
+      const descParts=[s.name];
+      if(s.brand)descParts.push('('+s.brand+')');
+      if(sub)descParts.push('— '+sub);
+      if(imei)descParts.push('| IMEI: '+imei);
+      addInvRow({desc:descParts.join(' '),qty,price:s.sell||0});
+    } else {
+      const qEl=document.getElementById('spq_'+id);
+      const qty=parseInt(qEl?qEl.value:sel)||1;
+      addInvRow({desc:s.name+(s.brand?' ('+s.brand+')':''),qty,price:s.sell||0});
+    }
+  });
+  calcInv();
+  closeModal('stockPickerModal');
+  spSelected={};spPhoneExpanded={};
+}
+
+function openItemEditModal(rowEl){
+  editItemRowEl=rowEl;
+  const inp=rowEl.querySelectorAll('input');
+  document.getElementById('ie_desc').value=inp[0].value;
+  document.getElementById('ie_qty').value=inp[1].value||1;
+  document.getElementById('ie_price').value=inp[2].value||'';
+  calcItemEditTotal();
+  document.getElementById('invItemEditModal').classList.add('open');
+}
+
+function calcItemEditTotal(){
+  const qty=parseFloat(document.getElementById('ie_qty').value)||0;
+  const price=parseFloat(document.getElementById('ie_price').value)||0;
+  document.getElementById('ie_total').textContent=fm(qty*price);
+}
+
+function saveItemEdit(){
+  const desc=document.getElementById('ie_desc').value.trim();
+  if(!desc){alert('Description required!');return;}
+  if(!editItemRowEl)return;
+  const inp=editItemRowEl.querySelectorAll('input');
+  inp[0].value=desc;
+  inp[1].value=document.getElementById('ie_qty').value||1;
+  inp[2].value=document.getElementById('ie_price').value||0;
+  calcInv();
+  closeModal('invItemEditModal');
+  editItemRowEl=null;
+}
+
+function deleteItemRow(){
+  if(!editItemRowEl)return;
+  if(document.querySelectorAll('#invItems .irow').length<=1){alert('At least one item required!');return;}
+  editItemRowEl.remove();
+  calcInv();
+  closeModal('invItemEditModal');
+  editItemRowEl=null;
 }
 
 function calcInv(){
@@ -897,7 +1329,7 @@ function saveInvoice(){
 
 function printInv(id){
   const v=data.invoices.find(x=>x.id===id);if(!v)return;
-  document.getElementById('printArea').innerHTML=`<div style="display:flex;justify-content:space-between;margin-bottom:28px"><div><div style="font-size:36px;font-weight:900;letter-spacing:4px">Nuwan<span style="color:#a8cc20">Fix</span></div><div style="font-size:11px;color:#666">Phone Repair & Shop · Sri Lanka</div></div><div style="text-align:right"><div style="font-size:22px;font-weight:900;letter-spacing:2px">INVOICE #${v.num}</div><div style="font-size:18px;color:#a8cc20">${fd(v.date)}</div></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px"><div><div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#999;margin-bottom:4px">Bill To</div><div style="font-size:15px;font-weight:700">${v.customer}</div><div style="color:#666">${v.phone||''}</div></div><div style="text-align:right"><div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#999;margin-bottom:4px">Payment</div><div style="font-size:14px;font-weight:700">${v.status}</div><div style="color:#666">${v.method||'Cash'}</div></div></div><table style="width:100%;border-collapse:collapse;margin:16px 0"><thead><tr style="background:#f0f0f0"><th style="padding:8px 10px;text-align:left;font-size:11px">Description</th><th style="padding:8px 10px;text-align:center">Qty</th><th style="padding:8px 10px;text-align:right">Unit Price</th><th style="padding:8px 10px;text-align:right">Amount</th></tr></thead><tbody>${(v.items||[]).map(it=>`<tr><td style="padding:8px 10px;border-bottom:1px solid #eee">${it.desc}</td><td style="padding:8px 10px;border-bottom:1px solid #eee;text-align:center">${it.qty}</td><td style="padding:8px 10px;border-bottom:1px solid #eee;text-align:right">Rs. ${Number(it.price).toLocaleString()}</td><td style="padding:8px 10px;border-bottom:1px solid #eee;text-align:right">Rs. ${(it.qty*it.price).toLocaleString()}</td></tr>`).join('')}</tbody></table><div style="display:flex;justify-content:flex-end"><div style="width:240px"><div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee"><span>Subtotal</span><span>${fm(v.subtotal)}</span></div>${v.discount>0?`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee"><span>Discount</span><span>- ${fm(v.discount)}</span></div>`:''}<div style="display:flex;justify-content:space-between;padding:10px 0;font-size:20px;font-weight:900"><span>TOTAL</span><span style="color:#a8cc20">${fm(v.total)}</span></div></div></div>${v.notes?`<div style="margin-top:16px;padding:10px;background:#f9f9f9;font-size:12px;color:#666"><strong>Notes:</strong> ${v.notes}</div>`:''}<div style="margin-top:36px;text-align:center;font-size:11px;color:#999">Thank you for choosing NuwanFix! · Sri Lanka</div>`;
+  document.getElementById('printArea').innerHTML=buildPrintHTML({...v,num:v.num});
   window.print();
 }
 
@@ -962,30 +1394,202 @@ function saveRepair(){
 function openCollect(id){
   const r=data.repairs.find(x=>x.id===id);if(!r)return;
   collectRepId=id;
-  document.getElementById('payRepSum').innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><div style="font-size:10px;color:var(--grey)">Customer</div><div style="font-weight:600;margin-top:2px">${r.customer}</div><div style="font-size:11px;color:var(--grey)">${r.phone||''}</div></div><div><div style="font-size:10px;color:var(--grey)">Device</div><div style="font-weight:600;margin-top:2px">${r.brand} ${r.model}</div><div style="font-size:11px;color:var(--grey)">${r.type||r.issue}</div></div><div><div style="font-size:10px;color:var(--grey)">Job #</div><div style="color:var(--lime);font-family:'Bebas Neue',sans-serif;font-size:20px">R#${r.num}</div></div><div><div style="font-size:10px;color:var(--grey)">Estimate</div><div style="color:var(--lime);font-family:'Bebas Neue',sans-serif;font-size:20px">${fm(r.cost)}</div></div></div>`;
-  document.getElementById('py_amt').value=r.cost||'';
-  document.getElementById('py_recv').value='';document.getElementById('py_method').value='Cash';
-  document.getElementById('py_repSt').value='Completed';document.getElementById('py_notes').value='';
+  document.getElementById('payRepSum').innerHTML=`
+    <div><div style="font-size:10px;color:var(--grey);letter-spacing:1px;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif">Customer</div><div style="font-weight:600;margin-top:3px">${r.customer}</div><div style="font-size:11px;color:var(--grey)">${r.phone||''}</div></div>
+    <div><div style="font-size:10px;color:var(--grey);letter-spacing:1px;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif">Device</div><div style="font-weight:600;margin-top:3px">${r.brand} ${r.model}</div><div style="font-size:11px;color:var(--grey)">${r.type||r.issue}</div></div>
+    <div><div style="font-size:10px;color:var(--grey);letter-spacing:1px;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif">Job #</div><div style="color:var(--lime);font-family:'Bebas Neue',sans-serif;font-size:22px;margin-top:2px">R#${r.num}</div></div>
+    <div><div style="font-size:10px;color:var(--grey);letter-spacing:1px;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif">Estimate</div><div style="color:var(--lime);font-family:'Bebas Neue',sans-serif;font-size:22px;margin-top:2px">${fm(r.cost)}</div></div>`;
+  // Fill customer info
+  document.getElementById('py_cus').value=r.customer;
+  document.getElementById('py_ph').value=r.phone||'';
+  document.getElementById('py_date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('py_method').value='Cash';
+  document.getElementById('py_status').value='Paid';
+  document.getElementById('py_repSt').value='Completed';
+  document.getElementById('py_disc').value=0;
+  document.getElementById('py_notes').value='';
+  document.getElementById('py_recv').value='';
   document.getElementById('py_change').textContent='Rs. 0.00';
+  document.getElementById('py_change').style.color='var(--lime)';
+  // Pre-fill repair item
+  document.getElementById('payItems').innerHTML='';
+  addPayRow({desc:`${r.type||'Repair'} — ${r.brand} ${r.model} (${r.issue})`,qty:1,price:r.cost||0});
+  calcPayTotals();
   document.getElementById('payModal').classList.add('open');
 }
 
-function calcChange(){
-  const amt=parseFloat(document.getElementById('py_amt').value)||0;
+function addPayRow(it=null){
+  const r=document.createElement('div');r.className='irow';r.style.position='relative';
+  const desc=it?(it.desc||'').replace(/"/g,'&quot;'):'';
+  const qty=it?it.qty:1;
+  const price=it?it.price:'';
+  r.innerHTML=`
+    <div style="position:relative">
+      <input type="text" placeholder="Type to search stock..." value="${desc}" oninput="showPayStockSuggest(this)" onblur="hideStockSuggest(this)" onkeydown="navStockSuggest(event,this)" autocomplete="off" style="width:100%">
+      <div class="stock-suggest" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--mid);border:1px solid var(--lime);border-top:none;z-index:9999;max-height:200px;overflow-y:auto"></div>
+    </div>
+    <input type="number" placeholder="1" value="${qty}" min="1" oninput="calcPayTotals()">
+    <input type="number" placeholder="0.00" value="${price}" min="0" oninput="calcPayTotals()">
+    <button class="rm-btn" onclick="this.closest('.irow').remove();calcPayTotals()">✕</button>`;
+  document.getElementById('payItems').appendChild(r);
+  if(it)calcPayTotals();
+}
+
+function showPayStockSuggest(inp){
+  calcPayTotals();
+  // reuse same suggest logic but calc pay totals
+  const q=inp.value.trim().toLowerCase();
+  const drop=inp.parentElement.querySelector('.stock-suggest');
+  if(!q){drop.style.display='none';return;}
+  const matches=(data.stock||[]).filter(s=>
+    s.name.toLowerCase().includes(q)||(s.brand||'').toLowerCase().includes(q)||(s.category||'').toLowerCase().includes(q)||(s.model||'').toLowerCase().includes(q)
+  ).slice(0,8);
+  if(!matches.length){drop.style.display='none';return;}
+  drop.innerHTML=matches.map((s,i)=>{
+    const isPhone=s.category==='Phones';
+    const sub=isPhone?[s.model,s.color,s.storage].filter(Boolean).join(' · '):(s.notes||'');
+    return `<div class="ssi" data-idx="${i}" data-id="${s.id}" onmousedown="pickPayStockSuggest(event,'${s.id}',this)" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);gap:8px">
+      <div style="min-width:0">
+        <div style="font-size:13px;font-weight:600">${isPhone?'📱 ':''}${s.name}${s.brand?` <span style="color:var(--grey);font-size:11px">(${s.brand})</span>`:''}</div>
+        ${sub?`<div style="font-size:11px;color:var(--grey)">${sub}</div>`:''}
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--lime)">${fm(s.sell||0)}</div>
+        <div style="font-size:10px;color:var(--grey)">Qty: ${s.qty}</div>
+      </div>
+    </div>`;
+  }).join('');
+  drop.style.display='block';
+  drop.querySelectorAll('.ssi').forEach(el=>el.addEventListener('mouseover',()=>{drop.querySelectorAll('.ssi').forEach(x=>x.style.background='');el.style.background='rgba(200,241,53,0.08)';}));
+}
+
+function pickPayStockSuggest(e,id,el){
+  e.preventDefault();
+  const s=data.stock.find(x=>x.id===id);if(!s)return;
+  const irow=el.closest('.irow');
+  const drop=irow.querySelector('.stock-suggest');
+  const isPhone=s.category==='Phones';
+  const imeis=s.imeis||[];
+  if(isPhone&&imeis.length){
+    drop.innerHTML=`<div style="padding:8px 12px;font-size:11px;letter-spacing:2px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--border)">Select IMEI for ${s.name}</div>`+
+    imeis.map(imei=>`<div onmousedown="pickPayImeiSuggest(event,'${id}','${imei}')" style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border)" onmouseover="this.style.background='rgba(200,241,53,0.08)'" onmouseout="this.style.background=''">
+      <div style="font-family:monospace;font-size:12px;letter-spacing:1px">${imei}</div>
+      <div style="margin-left:auto;font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--lime)">${fm(s.sell||0)}</div>
+    </div>`).join('')+
+    `<div onmousedown="pickPayImeiSuggest(event,'${id}',null)" style="padding:8px 12px;cursor:pointer;font-size:12px;color:var(--grey)" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background=''">Add without IMEI</div>`;
+    return;
+  }
+  const sub=[s.model,s.color,s.storage].filter(Boolean).join(' · ');
+  const desc=s.name+(s.brand?' ('+s.brand+')':'')+(isPhone&&sub?' — '+sub:'');
+  irow.querySelector('input[type="text"]').value=desc;
+  const ni=irow.querySelectorAll('input[type="number"]');ni[0].value=1;ni[1].value=s.sell||0;
+  drop.style.display='none';calcPayTotals();
+}
+
+function pickPayImeiSuggest(e,id,imei){
+  e.preventDefault();
+  const s=data.stock.find(x=>x.id===id);if(!s)return;
+  const drop=e.currentTarget.closest('.stock-suggest');if(!drop)return;
+  const irow=drop.closest('.irow');if(!irow)return;
+  const sub=[s.model,s.color,s.storage].filter(Boolean).join(' · ');
+  const desc=s.name+(s.brand?' ('+s.brand+')':'')+(sub?' — '+sub:'')+(imei?' | IMEI: '+imei:'');
+  irow.querySelector('input[type="text"]').value=desc;
+  const ni=irow.querySelectorAll('input[type="number"]');ni[0].value=1;ni[1].value=s.sell||0;
+  drop.style.display='none';calcPayTotals();
+}
+
+function openPayStockPicker(){
+  // Temporarily redirect stock picker to add rows to payItems
+  spSelected={};spPhoneExpanded={};
+  window._payStockMode=true;
+  document.getElementById('spSearch').value='';
+  document.getElementById('spCatFilter').value='';
+  renderStockPicker('');
+  document.getElementById('stockPickerModal').classList.add('open');
+}
+
+// Override addStockItemsToInv to detect pay mode
+const _origAddStockItems=window.addStockItemsToInv;
+window.addStockItemsToInv=function(){
+  const ids=Object.keys(spSelected);
+  if(!ids.length){alert('Select at least one item!');return;}
+  const target=window._payStockMode?'payItems':'invItems';
+  const addFn=window._payStockMode?addPayRow:addInvRow;
+  ids.forEach(id=>{
+    const s=data.stock.find(x=>x.id===id);if(!s)return;
+    const sel=spSelected[id];
+    const isPhone=s.category==='Phones';
+    if(isPhone){
+      const imei=sel.imei;
+      const sub=[s.model,s.color,s.storage].filter(Boolean).join(' · ');
+      const descParts=[s.name];
+      if(s.brand)descParts.push('('+s.brand+')');
+      if(sub)descParts.push('— '+sub);
+      if(imei)descParts.push('| IMEI: '+imei);
+      addFn({desc:descParts.join(' '),qty:1,price:s.sell||0});
+    } else {
+      const qEl=document.getElementById('spq_'+id);
+      const qty=parseInt(qEl?qEl.value:sel)||1;
+      addFn({desc:s.name+(s.brand?' ('+s.brand+')':''),qty,price:s.sell||0});
+    }
+  });
+  window._payStockMode?calcPayTotals():calcInv();
+  closeModal('stockPickerModal');
+  spSelected={};spPhoneExpanded={};
+  window._payStockMode=false;
+};
+
+function calcPayTotals(){
+  let sub=0;
+  document.querySelectorAll('#payItems .irow').forEach(r=>{const inp=r.querySelectorAll('input[type="number"]');sub+=(parseFloat(inp[0].value)||0)*(parseFloat(inp[1].value)||0);});
+  const disc=parseFloat(document.getElementById('py_disc').value)||0;
+  const tot=Math.max(0,sub-disc);
+  document.getElementById('py_sub').textContent=fm(sub);
+  document.getElementById('py_dshow').textContent='- '+fm(disc);
+  document.getElementById('py_tot').textContent=fm(tot);
+  calcPayChange();
+}
+
+function calcPayChange(){
+  const tot=parseFloat(document.getElementById('py_tot').textContent.replace(/[^0-9.]/g,''))||0;
   const recv=parseFloat(document.getElementById('py_recv').value)||0;
+  const change=recv-tot;
   const el=document.getElementById('py_change');
-  el.textContent=fm(Math.max(0,recv-amt));
-  el.style.color=(recv-amt)<0?'var(--red)':'var(--lime)';
+  el.textContent=fm(Math.abs(change));
+  el.style.color=change<0?'var(--red)':'var(--lime)';
+}
+
+function calcChange(){calcPayChange();}
+
+function printPayInv(){
+  // Build temp invoice object and print
+  const rows=document.querySelectorAll('#payItems .irow');
+  const items=[];let sub=0;
+  rows.forEach(r=>{const inp=r.querySelectorAll('input[type="number"]'),desc=r.querySelector('input[type="text"]').value.trim(),qty=parseFloat(inp[0].value)||1,price=parseFloat(inp[1].value)||0;if(desc){items.push({desc,qty,price});sub+=qty*price;}});
+  const disc=parseFloat(document.getElementById('py_disc').value)||0,total=Math.max(0,sub-disc);
+  const r=data.repairs.find(x=>x.id===collectRepId)||{};
+  const tmpInv={num:'R#'+(r.num||'?'),customer:document.getElementById('py_cus').value,phone:document.getElementById('py_ph').value,date:document.getElementById('py_date').value,status:document.getElementById('py_status').value,method:document.getElementById('py_method').value,discount:disc,notes:document.getElementById('py_notes').value,items,subtotal:sub,total};
+  document.getElementById('printArea').innerHTML=buildPrintHTML(tmpInv);
+  window.print();
+}
+
+function buildPrintHTML(v){
+  return `<div style="display:flex;justify-content:space-between;margin-bottom:28px"><div><div style="font-size:36px;font-weight:900;letter-spacing:4px">Nuwan<span style="color:#a8cc20">Fix</span></div><div style="font-size:11px;color:#666">Phone Repair & Shop · Sri Lanka</div></div><div style="text-align:right"><div style="font-size:22px;font-weight:900;letter-spacing:2px">INVOICE #${v.num}</div><div style="font-size:18px;color:#a8cc20">${fd(v.date)}</div></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px"><div><div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#999;margin-bottom:4px">Bill To</div><div style="font-size:15px;font-weight:700">${v.customer}</div><div style="color:#666">${v.phone||''}</div></div><div style="text-align:right"><div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#999;margin-bottom:4px">Payment</div><div style="font-size:14px;font-weight:700">${v.status}</div><div style="color:#666">${v.method||'Cash'}</div></div></div><table style="width:100%;border-collapse:collapse;margin:16px 0"><thead><tr style="background:#f0f0f0"><th style="padding:8px 10px;text-align:left;font-size:11px">Description</th><th style="padding:8px 10px;text-align:center">Qty</th><th style="padding:8px 10px;text-align:right">Unit Price</th><th style="padding:8px 10px;text-align:right">Amount</th></tr></thead><tbody>${(v.items||[]).map(it=>`<tr><td style="padding:8px 10px;border-bottom:1px solid #eee">${it.desc}</td><td style="padding:8px 10px;border-bottom:1px solid #eee;text-align:center">${it.qty}</td><td style="padding:8px 10px;border-bottom:1px solid #eee;text-align:right">Rs. ${Number(it.price).toLocaleString()}</td><td style="padding:8px 10px;border-bottom:1px solid #eee;text-align:right">Rs. ${(it.qty*it.price).toLocaleString()}</td></tr>`).join('')}</tbody></table><div style="display:flex;justify-content:flex-end"><div style="width:240px"><div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee"><span>Subtotal</span><span>${fm(v.subtotal)}</span></div>${v.discount>0?`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee"><span>Discount</span><span>- ${fm(v.discount)}</span></div>`:''}<div style="display:flex;justify-content:space-between;padding:10px 0;font-size:20px;font-weight:900"><span>TOTAL</span><span style="color:#a8cc20">${fm(v.total)}</span></div></div></div>${v.notes?`<div style="margin-top:16px;padding:10px;background:#f9f9f9;font-size:12px;color:#666"><strong>Notes:</strong> ${v.notes}</div>`:''}<div style="margin-top:36px;text-align:center;font-size:11px;color:#999">Thank you for choosing NuwanFix! · Sri Lanka</div>`;
 }
 
 function doCollect(sendWA=false){
-  const amt=parseFloat(document.getElementById('py_amt').value)||0;
-  if(!amt){alert('Amount required!');return;}
+  const cus=document.getElementById('py_cus').value.trim();
+  if(!cus){alert('Customer name required!');return;}
+  const rows=document.querySelectorAll('#payItems .irow');
+  const items=[];let sub=0;
+  rows.forEach(r=>{const inp=r.querySelectorAll('input[type="number"]'),desc=r.querySelector('input[type="text"]').value.trim(),qty=parseFloat(inp[0].value)||1,price=parseFloat(inp[1].value)||0;if(desc){items.push({desc,qty,price});sub+=qty*price;}});
+  if(!items.length){alert('Add at least one item!');return;}
+  const disc=parseFloat(document.getElementById('py_disc').value)||0,total=Math.max(0,sub-disc);
   const r=data.repairs.find(x=>x.id===collectRepId);if(!r)return;
-  const inv={id:'inv_'+Date.now(),num:data.nextInvoiceNum++,repairId:r.id,customer:r.customer,phone:r.phone||'',date:new Date().toISOString().split('T')[0],status:'Paid',method:document.getElementById('py_method').value,discount:0,notes:`Repair R#${r.num} — ${r.brand} ${r.model} — ${r.issue}${document.getElementById('py_notes').value?' | '+document.getElementById('py_notes').value:''}`,items:[{desc:`${r.type||'Repair'} — ${r.brand} ${r.model}`,qty:1,price:amt}],subtotal:amt,total:amt};
+  const inv={id:'inv_'+Date.now(),num:data.nextInvoiceNum++,repairId:r.id,customer:cus,phone:document.getElementById('py_ph').value,date:document.getElementById('py_date').value,status:document.getElementById('py_status').value,method:document.getElementById('py_method').value,discount:disc,notes:document.getElementById('py_notes').value,items,subtotal:sub,total};
   data.invoices.push(inv);
-  r.status=document.getElementById('py_repSt').value;r.cost=amt;
-  autoAddCus(r.customer,r.phone);
+  r.status=document.getElementById('py_repSt').value;r.cost=total;
+  autoAddCus(cus,inv.phone);
   closeModal('payModal');renderAll();schedulSync();
   if(sendWA){setTimeout(()=>waInv(inv.id),400);}
   else if(confirm(`✅ Payment collected!\nInvoice #${inv.num} created.\n\nSend WhatsApp receipt?`)){waInv(inv.id);}
@@ -1167,14 +1771,14 @@ function renderGRN(){
     const isPhone=s.category==='Phones';
     const nameExtra=isPhone?`<div style="font-size:10px;color:var(--grey);margin-top:1px">${[s.model,s.color,s.storage,s.ram].filter(Boolean).join(' · ')}</div>`:(s.notes?`<div style="font-size:10px;color:var(--grey)">${s.notes}</div>`:'');
     const imeiBadge=isPhone&&(s.imeis||[]).length?`<div style="font-size:10px;color:var(--blue);margin-top:2px">IMEI: ${(s.imeis||[]).join(' / ')}</div>`:'';
-    return `<tr>
+    return `<tr class="stock-row" onclick="openItemModal('${s.id}')" title="Click to edit item" style="cursor:pointer">
       <td><div style="font-weight:600">${s.name}</div>${nameExtra}${imeiBadge}</td>
       <td style="color:var(--white)">${s.brand||'—'}</td>
       <td style="color:var(--grey);font-size:12px">${s.supplier||'—'}</td>
       <td><span class="badge bl">${s.category||'—'}</span>${isPhone&&s.condition?`<div style="font-size:10px;color:var(--grey);margin-top:2px">${s.condition}</div>`:''}</td>
       <td><span style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:${isLow?'var(--red)':'var(--lime)'}">${s.qty}</span> <span style="font-size:11px;color:var(--grey)">${s.unit||'Pcs'}</span></td>
       <td style="color:var(--grey)">${fm(s.sell||0)}</td>
-      <td><div style="display:flex;gap:5px"><button class="btn btn-lime btn-sm" onclick="quickStock('${s.id}')">+</button><button class="btn btn-outline btn-sm" onclick="openItemModal('${s.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="askDelete('stock','${s.id}')">🗑</button></div></td>
+      <td onclick="event.stopPropagation()"><div style="display:flex;gap:5px"><button class="btn btn-lime btn-sm" onclick="quickStock('${s.id}')">+</button><button class="btn btn-outline btn-sm" onclick="openItemModal('${s.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="askDelete('stock','${s.id}')">🗑</button></div></td>
     </tr>`;
   }).join(''):'<tr><td colspan="7"><div class="empty"><div class="ei">📦</div><p>No stock items yet</p></div></td></tr>';
 
@@ -1198,14 +1802,14 @@ function renderStock(f=''){
     const isPhone=s.category==='Phones';
     const nameExtra=isPhone?`<div style="font-size:10px;color:var(--grey);margin-top:1px">${[s.model,s.color,s.storage,s.ram].filter(Boolean).join(' · ')}</div>`:(s.notes?`<div style="font-size:10px;color:var(--grey)">${s.notes}</div>`:'');
     const imeiBadge=isPhone&&(s.imeis||[]).length?`<div style="font-size:10px;color:var(--blue);margin-top:2px">IMEI: ${(s.imeis||[]).join(' / ')}</div>`:'';
-    return `<tr>
+    return `<tr class="stock-row" onclick="openItemModal('${s.id}')" title="Click to edit item" style="cursor:pointer">
       <td><div style="font-weight:600">${s.name}</div>${nameExtra}${imeiBadge}</td>
       <td style="color:var(--white)">${s.brand||'—'}</td>
       <td style="color:var(--grey);font-size:12px">${s.supplier||'—'}</td>
       <td><span class="badge bl">${s.category||'—'}</span></td>
       <td><span style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:${isLow?'var(--red)':'var(--lime)'}">${s.qty}</span></td>
       <td style="color:var(--grey)">${fm(s.sell||0)}</td>
-      <td><div style="display:flex;gap:5px"><button class="btn btn-lime btn-sm" onclick="quickStock('${s.id}')">+</button><button class="btn btn-outline btn-sm" onclick="openItemModal('${s.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="askDelete('stock','${s.id}')">🗑</button></div></td>
+      <td onclick="event.stopPropagation()"><div style="display:flex;gap:5px"><button class="btn btn-lime btn-sm" onclick="quickStock('${s.id}')">+</button><button class="btn btn-outline btn-sm" onclick="openItemModal('${s.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="askDelete('stock','${s.id}')">🗑</button></div></td>
     </tr>`;
   }).join(''):'<tr><td colspan="7"><div class="empty"><div class="ei">🔍</div><p>No items found</p></div></td></tr>';
 }
